@@ -1,0 +1,3 @@
+tree -I "venv|__pycache__|*.pyc"    階層のツリー構造を生成する
+
+

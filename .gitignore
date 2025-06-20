@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+
+# 仮想環境フォルダ
+venv/
+.venv/
+
+# OS固有のファイル (macOS)
+.DS_Store
+
+# 巨大なデータフォルダ
+data/
+
+# APIキーやパスワードなど、絶対に公開してはいけない設定ファイル
+.env

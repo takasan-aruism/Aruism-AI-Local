@@ -1,0 +1,94 @@
+コードリスト
+
+1. 思考の骨格（データモデルとDB管理）
+	src/ontology/models.py
+	src/ontology/db_manager.py
+2. 思考の健全性を保つ監視役
+	src/integrity/daemon.py
+3. 初期知識の獲得（ブートストラップ）
+	src/bootstrapping/wordnet_importer.py
+	src/bootstrapping/sentiwordnet_importer.py
+4. 思考エンジンのプロトタイプ
+	src/reasoning/symmetry_engine.py
+	src/reasoning/hierarchy_engine.py
+	src/reasoning/causal_engine.py
+	src/integration/knowledge_linker.py
+	src/integration/frequency_provider.py
+5.外部世界との連携
+	src/integration/knowledge_linker.py
+	src/integration/frequency_provider.py
+6.全体を統括する司令塔
+	server.py (旧 main.py)
+7.外部AI連携・自動化ツール
+	broadcast_control_panel.html
+	pyautogui_broadcast.py----ファイル名変更、不要のため破棄
+8.開発支援・デバッグ用スクリプト
+	curate_knowledge.py
+	browser_test.py
+	debug_sqlite.py
+
+
+コード概要
+
+1. 思考の骨格（データモデルとDB管理）
+
+src/ontology/models.py
+機能内容: Aruismの概念をプログラムコードとして定義する、最も基本的な設計図です。MeaningID（存在の核）、Word（字句）、AxisDefinition（軸）、Relationship（関係性）、User（主観性の基点）といった、AIが思考するためのデータ構造をクラスとして定義しています。
+
+src/ontology/db_manager.py
+機能内容: models.pyで定義したデータ構造を、実際にNeo4jグラフデータベースに書き込んだり、読み取ったり、更新したりするための「データベース管理人」です。データベースへの接続・切断や、ノード・関係性の作成といった全てのデータベース操作を担います。
+
+2. 思考の健全性を保つ監視役
+
+src/integrity/daemon.py
+機能内容: 私たちの知識ベース（グラフデータベース）が、Aruismの哲学的原則から逸脱していないかを自動でチェックする「哲学的整合性デーモン」のプロトタイプです。現在は、「孤児ノードの検出」と「非対称な価値ノードの検出」機能が実装されています。
+
+3. 初期知識の獲得（ブートストラップ）
+
+src/bootstrapping/wordnet_importer.py
+機能内容: 外部の言語データベースである「日本語WordNet」から、数万件規模の概念（ノード）と、それらの間の関係性（上位・下位関係など）を抽出し、私たちのNeo4jデータベースに自動でインポートします。
+
+src/bootstrapping/sentiwordnet_importer.py
+機能内容: wordnet_importer.pyで作成した概念ノードに対し、SentiWordNetのデータを用いて「ポジティブ/ネガティブ」といった感情スコアを付与（プロパティを更新）します。
+
+4. 思考エンジンのプロトタイプ
+
+src/reasoning/symmetry_engine.py
+機能内容: Aruismの「存在の対称性」の原則に基づき、ある概念（例：「善」）の対称となる概念（例：「悪」）をデータベースから見つけ出し、新しい視点を促す「反転質問」を生成します。また、テキスト内に対称的な概念ペアが含まれているかを検出する機能も持ちます。
+
+src/reasoning/hierarchy_engine.py
+機能内容: Aruismの「存在の階層性」の原則に基づき、ある概念（例：「ハワイ島」）が、どのような上位概念（「島」→「陸地」…）に属しているのか、その階層構造をデータベースから辿って明らかにします。
+
+src.reasoning/causal_engine.py
+機能内容: Aruismの「存在の連動性」の原則に基づき、概念間の因果関係（例：「雨」が「地面が濡れる」の原因となる）を、上流（原因）と下流（結果）の両方向に辿る機能を持ちます。
+5. 外部世界との連携
+
+src.integration/knowledge_linker.py
+機能内容: AI「アリスト」が、外部の巨大な百科事典的知識ベースである「Wikidata」にリアルタイムで接続し、特定の概念に関する説明文を取得したり、一意のIDを紐づけたりする機能を提供します。
+
+src.integration/frequency_provider.py
+機能内容: 青空文庫などのテキストデータを解析し、各単語の出現頻度をカウントします。これにより、AIが言葉の一般的・専門的度合いを判断するための基礎データを提供します。
+
+6. 全体を統括する司令塔
+
+server.py (旧 main.py)
+機能内容: 当初は思考エンジン群を束ねる対話型のmain.pyとして開発されましたが、後にFastAPIを用いたAPIサーバーへと進化しました。操作パネルからの指示を受け付け、Playwrightを制御してブラウザを遠隔操作する、現在の「AI連携IDE」の頭脳部です。
+
+7. 外部AI連携・自動化ツール
+
+broadcast_control_panel.html
+機能内容: 私たちの「作戦司令室」となるユーザーインターフェースです。このHTMLページをブラウザで開くことで、操作対象のAI（GPT, Geminiなど）を選択し、「送信」「コピー」といった指示をserver.pyに送ります。
+
+pyautogui_broadcast.py
+機能内容: Playwrightなどの手法がボット検知にブロックされた問題を解決するために開発された、最終的なブラウザ自動化スクリプトです。画面上の画像を直接認識してマウスとキーボードを操作することで、人間と全く同じ方法でWebサイトへの自動投稿を実現しました。
+
+8. 開発支援・デバッグ用スクリプト
+
+curate_knowledge.py
+機能内容: WordNetなどの自動インポートだけでは補いきれない重要な関係性（例：「善」と「悪」の対称関係）を、手動でデータベースに補完（キュレーション）するためのパッチスクリプトです。
+
+browser_test.py
+機能内容: Seleniumおよびundetected-chromedriverのセットアップを検証するために、ブラウザを起動するだけの最小限のテストコードです。
+
+debug_sqlite.py
+機能内容: WordNetインポートの問題を切り分けるために、SQLiteデータベース（wnjpn.db）への接続とデータ取得だけを確認したデバッグ用スクリプトです。

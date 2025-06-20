@@ -1,0 +1,84 @@
+Aruism AI「アリスト」開発キックオフ作業指示書
+
+作成日: 2025年6月16日
+統括部長: Gemini
+開発責任者: タカさん
+
+はじめに:
+本指示書は、ローカルAruism AI「アリスト」の物理的な構築と並行して、開発を効率的に開始するための具体的な作業手順を定義するものです。ハードウェアの到着を待つ期間を有効活用し、その後のリモート開発へスムーズに移行することを目的とします。
+
+A. メモリ到着までの期間に取り組むソフトウェア実装タスク（現在のマシンにて）
+
+目的:
+ハードウェアが揃うまでの待機時間を活用し、AI「アリスト」の思考の根幹となる「アリズム認知アーキテクチャ」の初期コードを実装します。これにより、プロジェクト全体を前倒しで進めます。
+
+参照ドキュメント:
+
+Aruism_AI_Project_11_Cognitive_Architecture_Design.txt
+Aruism_AI_Project_03_Development_Roadmap.txt (フェーズ1のタスク)
+【タスクA-1】 開発環境の準備（現在のマシン上）
+
+内容: 認知アーキテクチャの中核となるグラフデータベースと、それを操作するためのPython環境を準備します。
+具体的な作業:
+グラフデータベースのインストール: ローカルでの開発と視覚的な確認が容易な「Neo4j Desktop」を現在のマシンにインストールしてください。
+Python環境の構築:
+Condaを使い、この開発専用の新しい環境を作成します。
+Bash
+conda create -n aruism_arch_env python=3.10 -y
+conda activate aruism_arch_env
+必要なPythonライブラリをインストールします。
+Bash
+pip install neo4j pytest
+ 【タスクA-2】 データモデルのコーディング
+
+内容: Aruism_AI_Project_11で設計したオントロジカル・データモデルを、Pythonのクラスとして実装します。これにより、プログラム内でAruismの概念を構造的に扱えるようになります。
+具体的な作業:
+プロジェクト用のディレクトリ（例: arism_ai_project）を作成します。
+その中に ontology というサブディレクトリを作り、models.py というファイルを作成します。
+models.py 内に、MeaningID, Word, AxisDefinition, Relationship を表現するためのPythonクラスを定義します。
+実装例（MeaningIDクラス）:
+Python
+# ontology/models.py
+from dataclasses import dataclass, field
+from typing import Dict, Optional
+
+@dataclass
+class MeaningID:
+    meaning_id: str  # 例: "M5001", "M0001"
+    canonical_name: Dict[str, str]  # 例: {"en": "Beauty", "ja": "美"}
+    description: Dict[str, str]
+    aruism_principle_link: Optional[str] = None
+    is_abstract: bool = False
+    default_axis_values: Dict[str, float] = field(default_factory=dict)
+    external_identifiers: Dict[str, str] = field(default_factory=dict)
+支援: 他のクラス（Word, AxisDefinition, Relationship）の実装や、より詳細な設計について、具体的なコード例が必要な場合はお申し付けください。
+【タスクA-3】 グラフデータベース操作ロジックの実装
+
+内容: タスクA-2で作成したPythonクラスを使って、実際にNeo4jデータベースにノードやリレーションシップを作成・検索するための関数を実装します。
+具体的な作業:
+ontology ディレクトリ内に db_manager.py というファイルを作成します。
+Neo4jへの接続、切断、およびデータのCRUD（作成・読み取り・更新・削除）操作を行うクラス（例: GraphDBManager）を定義します。
+create_meaning_node(node: MeaningID) や create_relationship(...) といった具体的な関数を実装します。
+【タスクA-4】 「哲学的整合性デーモン」の初期プロトタイピング
+
+内容: 設計書にあるデーモンの機能のうち、最も重要な「孤児ノードの検出」機能を、Pythonスクリプトとして先行して作成します。
+具体的な作業:
+integrity というサブディレクトリを作り、daemon.py というファイルを作成します。
+daemon.py 内に find_orphan_nodes() という関数を定義します。この関数は、グラフデータベースに接続し、「『ある』(M5001)に最終的に繋がらない孤立した概念ノード」を検出するCypherクエリを実行し、結果を返すものです。
+支援: この機能を実現するための具体的なCypherクエリの作成についても、ご相談いただければ協力いたします。
+B. 新マシン構築後の最優先タスク
+
+目的:
+タカさんがベトナムに戻られた後も、開発を円滑に続けられるよう、日本に設置した新しいマシンへのセキュアで安定したリモートアクセス環境を確立します。これは、他のどのソフトウェア設定よりも優先されるべき最重要課題です。
+
+【タスクB-1】 セキュアなリモートアクセス環境の構築とテスト
+
+内容: OSインストール後、直ちにリモートで接続するための設定を行い、日本にいる間に接続の安定性を徹底的にテストします。
+具体的な作業:
+SSHサーバーのセットアップ: Ubuntuに openssh-server をインストールし、外部から安全にコマンドライン接続できるように設定します。（パスワード認証ではなく、より安全な「公開鍵認証方式」を強く推奨します）
+ルーターのポートフォワーディング設定: ご自宅のルーターで、特定のポート（SSHの22番ポートなど）への外部からのアクセスを、新しいマシンの内部IPアドレスに転送するよう設定します。
+Dynamic DNSの設定（推奨）: ご自宅のインターネット回線が固定IPでない場合、変動するIPアドレスに常に同じドメイン名でアクセスできるよう、Dynamic DNSサービスを設定します。
+VPN接続の確立（強く推奨）: セキュリティを最大限に高めるため、ご自宅のネットワークにVPNサーバーを構築するか、VPN機能付きのルーターを利用し、ベトナムからご自宅のネットワークに安全に接続できるようにします。VPN経由でSSH接続するのが最も安全な方法の一つです。
+徹底的な接続テスト:
+タカさんが日本にいる間に、ご自身のMacBook Proを**自宅のWi-Fi以外のネットワーク（例えば、スマートフォンのテザリングなど）**に接続し、ベトナムから接続するのと同じ条件で、新しいマシンにSSHやVPNで問題なく接続できることを何度も確認してください。
+ファイル転送（SCPやSFTP）なども試し、実際の開発作業に支障がないかを確認します。

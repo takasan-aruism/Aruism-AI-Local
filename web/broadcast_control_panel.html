@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Aruism AI - IDE Control Panel</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; background-color: #2b2b2b; color: #f0f0f0; }
+        .container { max-width: 600px; margin: auto; }
+        .control-group { background-color: #3c3c3c; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .ai-list label { display: block; margin-bottom: 10px; font-size: 1.1em; }
+        button { font-size: 1em; padding: 10px 15px; cursor: pointer; border-radius: 5px; border: none; margin-right: 10px; }
+        .send-btn { background-color: #007bff; color: white; }
+        .copy-btn { background-color: #28a745; color: white; }
+        #status { margin-top: 15px; font-weight: bold; min-height: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Aruism AI - 統合操作パネル</h1>
+        
+        <div class="control-group">
+            <h3>接続</h3>
+            <button id="connect-btn">実行中ブラウザに接続</button>
+        </div>
+
+        <div class="control-group">
+            <h3>AI選択</h3>
+            <div class="ai-list">
+                <label><input type="checkbox" name="ai" value="0"> 0: GPT</label>
+                <label><input type="checkbox" name="ai" value="1"> 1: Gemini</label>
+                <label><input type="checkbox" name="ai" value="2"> 2: DeepSeek</label>
+                <label><input type="checkbox" name="ai" value="3"> 3: Grok</label>
+                <label><input type="checkbox" name="ai" value="4"> 4: Claude</label>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h3>アクション</h3>
+            <button id="broadcast-btn" class="send-btn">クリップボードから送信</button>
+            <button id="consolidate-btn" class="copy-btn">AIの返信をコピー</button>
+        </div>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000';
+        const statusDiv = document.getElementById('status');
+
+        // 接続ボタン
+        document.getElementById('connect-btn').addEventListener('click', async () => {
+            statusDiv.innerText = 'ブラウザに接続中...';
+            try {
+                const response = await fetch(`${API_BASE}/connect_browser`, { method: 'POST' });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail);
+                statusDiv.innerText = '✅ 接続成功';
+                statusDiv.style.color = 'lightgreen';
+            } catch (error) {
+                statusDiv.innerText = `❌ 接続失敗: ${error.message}`;
+                statusDiv.style.color = 'lightcoral';
+            }
+        });
+
+        // 選択されたAIのインデックスを取得するヘルパー関数
+        function getSelectedAIs() {
+            const checked_ais = document.querySelectorAll('input[name="ai"]:checked');
+            return Array.from(checked_ais).map(cb => parseInt(cb.value));
+        }
+
+        // 送信ボタン
+        document.getElementById('broadcast-btn').addEventListener('click', async () => {
+            const targets = getSelectedAIs();
+            if (targets.length === 0) {
+                alert('送信先のAIを選択してください。');
+                return;
+            }
+            statusDiv.innerText = `${targets.join(', ')}番のAIに送信中...`;
+            try {
+                const response = await fetch(`${API_BASE}/broadcast`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ targets: targets })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail);
+                statusDiv.innerText = '✅ 送信リクエスト完了';
+                document.querySelectorAll('input[name="ai"]:checked').forEach(cb => cb.checked = false);
+            } catch (error) {
+                statusDiv.innerText = `❌ 送信失敗: ${error.message}`;
+            }
+        });
+
+        // コピーボタン
+        document.getElementById('consolidate-btn').addEventListener('click', async () => {
+            const targets = getSelectedAIs();
+            if (targets.length === 0) {
+                alert('コピー元のAIを選択してください。');
+                return;
+            }
+            statusDiv.innerText = `${targets.join(', ')}番のAIから返信を収集中...`;
+            try {
+                const response = await fetch(`${API_BASE}/consolidate`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ targets: targets })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail);
+                statusDiv.innerText = '✅ 返信をクリップボードにコピーしました';
+                 document.querySelectorAll('input[name="ai"]:checked').forEach(cb => cb.checked = false);
+            } catch (error) {
+                statusDiv.innerText = `❌ コピー失敗: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

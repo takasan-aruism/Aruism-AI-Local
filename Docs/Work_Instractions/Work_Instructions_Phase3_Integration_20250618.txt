@@ -1,0 +1,51 @@
+Aruism AI「アリスト」開発作業指示書
+
+ファイル名: Work_Instructions_Phase3_Integration_20250618.txt
+作成日: 2025年6月18日
+統括部長: Gemini
+開発責任者: タカさん
+
+はじめに:
+本指示書は、ロードマップにおける「フェーズ3：サービス統合」のタスクを定義するものです。このフェーズの目的は、AI「アリスト」が自身の内部知識（グラフデータベース）だけでなく、外部の巨大な百科事典的知識（Wikipedia/DBpedia/Wikidata）をリアルタイムで参照する能力を獲得することです。これにより、アリストの応答はより文脈的で、事実に基づいた、豊かなものになります。
+
+参照ドキュメント:
+
+Aruism_AI_Project_11_Cognitive_Architecture_Design.txt
+Aruism_AI_Project_03_Development_Roadmap.txt
+src/ontology/models.py
+src/ontology/db_manager.py
+開発タスク
+
+【タスクC-1】 開発環境の準備
+
+目的: 外部サービスとの連携機能を実装するための、新しいディレクトリと、必要なライブラリを準備します。
+具体的な作業:
+ディレクトリとファイルの作成:
+srcフォルダの中にintegrationという新しいフォルダを作成し、その中に__init__.pyファイルを作成します。
+Bash
+mkdir src/integration
+touch src/integration/__init__.py
+src/integrationの中にknowledge_linker.pyという新しいファイルを作成します。
+Bash
+touch src/integration/knowledge_linker.py
+ライブラリのインストール:
+Wikidata等に問い合わせるためのSPARQLという言語をPythonで扱うためのライブラリをインストールします。ターミナルで以下のコマンドを実行してください。
+Bash
+pip install sparqlwrapper
+ 【タスクC-2】 Wikidata連携クライアントの実装
+
+目的: knowledge_linker.pyの中に、指定した概念について、Wikidataからその説明文などを取得してくる機能を実装します。
+具体的な作業:
+KnowledgeLinkerというクラスを作成します。
+このクラスは、私たちのNeo4jデータベースに接続し、特定のMeaningIDノード情報を取得します。
+さらに、Wikidataの公開API（SPARQLエンドポイント）に接続し、関連情報を問い合わせる機能を持ちます。
+支援: これは本フェーズの中心的なタスクです。この後のステップで、具体的なクラスの骨格、SPARQLクエリの例、およびそれらを実行するためのPythonコードを段階的に提示します。
+【タスクC-3】 既存ノードへのWikidata IDの追記（エンリッチメント）
+
+目的: 私たちのデータベースにある概念ノード（例：「ハワイ島」）と、Wikidata上の概念（例：Q18684）を恒久的に紐づけるため、WikidataのIDを私たちのノードのプロパティ（external_identifiers）に追記する機能を開発します。
+具体的な作業:
+wordnet_importer.pyを拡張するか、新しいエンリッチメント（情報付与）用のスクリプトを作成し、WordNetのインポート時に、対応するWikidata IDも検索して保存するロジックを追加します。
+支援: このタスクも、具体的な実装方法を別途提示します。
+本フェーズのゴール
+
+指定した概念（例：「ハワイ島」）について、Wikidataからその概要説明文を日本語で取得し、表示できるスクリプトを完成させることを、当面のゴールとします。
