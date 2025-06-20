@@ -1,0 +1,152 @@
+######################################################################
+# ドキュメント名: Aruism AI Project - Development Environment Specification
+#                 (アリズムAIプロジェクト - 開発環境仕様書)
+# プロジェクト: Local Aruism AI Development
+# バージョン: 1.0
+# 最終更新日: 2025-06-20
+######################################################################
+
+1.  **はじめに**
+    * 本書は、Aruism AIプロジェクトの開発における、標準的な環境、ツール、フレームワーク、および各種バージョンを定義する。
+    * プロジェクト参加者は、開発環境を本書の仕様に準拠させることで、再現性と整合性を確保する。
+
+2.  **統括部長（開発者）のローカル環境**
+    * 本セクションは、統括部長の現在の開発マシン環境を記録する。
+
+    * **OS:**
+        * macOS (バージョン： Sonoma 以降を推奨)
+
+    * **Python環境:**
+        * `venv` や `conda` 等の仮想環境利用を強く推奨。
+        * プロジェクトルートで `python -m venv venv` のように仮想環境を作成し、`source venv/bin/activate` で有効化する。
+
+    * **Neo4jデータベース:**
+        * **接続URI:** `bolt://localhost:7687` (標準設定)
+        * **ユーザー名:** `neo4j` (標準設定)
+        * **パスワード:** (設定したパスワード)
+        * **データディレクトリパス (macOSの例):**
+            * `※要確認：実際のパスに修正してください`
+            * `/Users/takahirourakami/Library/Application Support/Neo4j Desktop/Application/relate-data/dbmss/dbms-[ランダムなID]`
+
+3.  **主要な技術スタックとフレームワーク**
+    * プロジェクト全体で標準として使用する技術と、そのバージョンを規定する。
+
+    * **プログラミング言語:**
+        * **Python:** `3.12.x`
+
+    * **データベース:**
+        * **Neo4j:** `5.x` (最新安定版)
+
+    * **LLM推論エンジン:**
+        * **vLLM:** (最新安定版)
+        * **備考:** 高いパフォーマンスと開発上の柔軟性を両立するため、「DeepResearch」の提言に基づき採用を決定。
+
+    * **主要Pythonライブラリ:**
+        * `neo4j` (最新安定版): Neo4jデータベースとの接続用ドライバ。
+        * `pytest` (最新安定版): ユニットテストの実行フレームワーク。
+        * `uvicorn` (最新安定版): vLLMのAPIサーバー等で使用。
+        * `fastapi` (最新安定版): vLLMのAPIインターフェース等で使用。
+        * `transformers` (最新安定版): トークナイザー等、vLLMが依存するHugging Faceエコシステムのコアライブラリ。
+        * `pyautogui` (最新安定版): フェーズ4で実績のある、ブラウザ等のGUI操作自動化ライブラリ。
+        * `python-dotenv` (最新安定版): `.env`ファイルから環境変数を読み込むために使用。
+
+4.  **開発・協業ツール**
+
+    * **バージョン管理:**
+        * **Git:** (最新安定版)
+        * **リポジトリ:** **GitHub**
+
+    * **CI/CD (継続的インテグレーション/継続的デプロイメント):**
+        * **GitHub Actions**
+        * **備考:** コードプッシュ時に、ユニットテストや「アリズム適性検査」を自動実行する。
+
+    * **協力AIチーム:**
+        * **統括補佐AI:** Gemini
+        * **実装協力AI-A:** アーキテクト (Graph-RAG, プロンプト担当)
+        * **実装協力AI-B:** オプティマイザー (vLLM, パフォーマンス担当)
+        * **実装協力AI-C:** フィロソファー (倫理、哲学整合性担当)
+
+5.  ディレクトリ階層情報
+
+aruism_AI_Project
+├── Docs
+│   ├── AruismReport
+│   │   ├── Gemini_アリズムAI統合計画と評価_.pdf
+│   │   └── text.txt
+│   ├── Old Docs
+│   │   ├── # Aruism AI: 神秘化誤用防止モジュール v1.0（プロトタイプ）.pdf
+│   │   ├── # Aruism AI設計指針：ささやかなものを尊重する知性のために.pdf
+│   │   ├── **アリズムAI 倫理プロトコル：共鳴型存在理解モデル（Version 1.0）**.pdf
+│   │   ├── Aruism AI：構造的共鳴によるステップ生成モジュール（概念設計）.pdf
+│   │   ├── Aruism_Original_Text .pdf
+│   │   ├── アリズム原典 補章案 保存則と『ある』の哲学的考察.pdf
+│   │   └── アリズム対話形式による概念の深化.pdf
+│   ├── Work_Instractions
+│   │   ├── AruismAI開発タスク.numbers
+│   │   ├── AruismAI開発タスク.xlsx
+│   │   ├── Work_Instructions_Initial_Setup_and_Coding_20250616.txt.txt
+│   │   ├── Work_Instructions_Phase2_Bootstrapping_Prep_20250617.txt..txt
+│   │   ├── Work_Instructions_Phase3_Integration_20250618.txt
+│   │   ├── Work_Instructions_Pre-Hardware_Completion_20250618.txt
+│   │   ├── tasklist.txt
+│   │   ├── template_AIreview_suggest copy
+│   │   ├── template_AIreview_suggest_document
+│   │   └── template_AIreview_suggest＿code
+│   ├── codelist.txt
+│   ├── specification
+│   │   ├── Aruism_AI_Project _14_Development _Environment_Specification.txt
+│   │   ├── Aruism_AI_Project _Cognitive11_Architecture_Design_11.txt
+│   │   ├── Aruism_AI_Project.txt
+│   │   ├── Aruism_AI_Project_01_Core_Philosophy_and_Goals.txt
+│   │   ├── Aruism_AI_Project_02_System_Architecture.txt
+│   │   ├── Aruism_AI_Project_03_Development_Roadmap.txt
+│   │   ├── Aruism_AI_Project_04_System_Prompts_and_Persona.txt
+│   │   ├── Aruism_AI_Project_05_Knowledge_Base_Plan.txt
+│   │   ├── Aruism_AI_Project_06_Testing_and_Evaluation_Plan.txt
+│   │   ├── Aruism_AI_Project_07_Risk_Assessment_and_Mitigation.txt
+│   │   ├── Aruism_AI_Project_08_Collaboration_and_Communication_Plan.txt
+│   │   ├── Aruism_AI_Project_09_Log_and_Data_Management_Policy.txt
+│   │   ├── Aruism_AI_Project_10_Collaborator_Guidelines.txt
+│   │   ├── Aruism_AI_Project_12_Concept_Synthesis_Module_Specification.txt
+│   │   └── Aruism_AI_Project_13_LLM_Cognitive_Architecture_Integration_Specification.txt
+│   ├── terminal command
+│   └── アリズム哲学の構造的体系化.pdf
+├── data
+│   ├── SentiWordNet_3.0.0.txt
+│   ├── wnjpn.db
+│   └── yumejuya.txt
+├── requirements.txt
+├── scripts
+│   ├── broadcast_to_gpt.py
+│   └── curate_knowledge.py
+├── src
+│   ├── __init__.py
+│   └── aruism_ai
+│       ├── __init__.py
+│       ├── bootstrapping
+│       │   ├── __init__.py
+│       │   ├── sentiwordnet_importer.py
+│       │   └── wordnet_importer.py
+│       ├── integration
+│       │   ├── __init__.py
+│       │   ├── frequency_provider.py
+│       │   └── knowledge_linker.py
+│       ├── integrity
+│       │   ├── __init__.py
+│       │   └── daemon.py
+│       ├── ontology
+│       │   ├── __init__.py
+│       │   ├── db_manager.py
+│       │   └── models.py
+│       ├── reasoning
+│       │   ├── __init__.py
+│       │   ├── causal_engine.py
+│       │   ├── hierarchy_engine.py
+│       │   ├── subjectivity_engine.py
+│       │   └── symmetry_engine.py
+│       └── server.py
+├── tests
+└── web
+    └── broadcast_control_panel.html
+
+17 directories, 63 files
