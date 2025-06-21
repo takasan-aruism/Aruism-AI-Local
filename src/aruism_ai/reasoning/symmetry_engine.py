@@ -15,7 +15,7 @@ import sys
 # プロジェクトのルートディレクトリをシステムパスに追加
 sys.path.append(os.getcwd())
 
-from src.ontology.db_manager import GraphDBManager
+from aruism_ai.ontology.db_manager import GraphDBManager
 from janome.tokenizer import Tokenizer # ★ 形態素解析のために追加
 
 class SymmetryEngine:

@@ -10,13 +10,10 @@
 ######################################################################
 
 from neo4j import GraphDatabase
-import os
-import sys
+#import os
+#import sys
 
-# プロジェクトのルートディレクトリをシステムパスに追加
-sys.path.append(os.getcwd())
-
-from src.ontology.db_manager import GraphDBManager
+from aruism_ai.ontology.db_manager import GraphDBManager
 
 class PhilosophicalIntegrityDaemon:
     """

@@ -1,40 +1,29 @@
 ######################################################################
 # Aruism AI Project - Unit Tests for Graph Database Manager
-#
-# このファイルは、GraphDBManagerクラスのユニットテストを定義します。
-# データベースへの実際の接続は行わず、モッキングを用いて
-# データベースドライバとのやり取りが正しく行われるかを検証します。
-#
-# 参照ドキュメント: Aruism_AI_Project_06_Testing_and_Evaluation_Plan.txt
-# バージョン: 0.2
-# 作成日: 2025-06-21
+# バージョン: 1.1 (AIチームレビュー反映版)
+# 最終更新日: 2025-06-22
 ######################################################################
 
 import pytest
 from unittest.mock import patch, MagicMock
 
-# プロジェクトのルートからの絶対パスでモジュールをインポート
+# ▼▼▼ [修正点] importパスを 'aruism_ai.' 基準に統一 ▼▼▼
 from aruism_ai.ontology.models import MeaningID, Relationship
 from aruism_ai.ontology.db_manager import GraphDBManager
 
 # --- テスト用の定数 ---
 TEST_URI = "neo4j://testhost:7687"
 TEST_USER = "testuser"
-TEST_PASSWORD = "testpassword"
-
+TEST_PASSWORD = "11dr34SSAAa_$$aae"
 
 class TestGraphDBManager:
     """GraphDBManagerのユニットテストクラス"""
 
     def setup_method(self, method):
         """各テストメソッドの実行前に呼び出されるセットアップ"""
-        # モックを使って、実際のDB接続を行わないようにする
         self.mock_driver_patch = patch('aruism_ai.ontology.db_manager.GraphDatabase.driver')
         self.mock_driver = self.mock_driver_patch.start()
-        
-        # db_managerのインスタンスを作成
         self.db_manager = GraphDBManager(TEST_URI, TEST_USER, TEST_PASSWORD)
-        # db_managerが持つdriverインスタンスをモックに差し替える
         self.db_manager.driver = self.mock_driver
 
     def teardown_method(self, method):
@@ -42,17 +31,20 @@ class TestGraphDBManager:
         self.mock_driver_patch.stop()
 
     def test_successful_connection(self):
-        """データベースへの接続が成功するケースのテスト"""
+        """[正常系] データベースへの接続が成功するケースをテスト"""
         self.mock_driver.assert_called_once_with(TEST_URI, auth=(TEST_USER, TEST_PASSWORD))
         assert self.db_manager.driver is not None
 
     def test_close_connection(self):
-        """データベース接続を閉じる機能のテスト"""
+        """[正常系] データベース接続を閉じる機能のテスト"""
         self.db_manager.close()
         self.db_manager.driver.close.assert_called_once()
         
     def test_create_meaning_node(self):
-        """MeaningIDノード作成機能のテスト"""
+        """
+        [正常系/存在の核] MeaningIDノード作成機能をテスト
+        Aruism認知アーキテクチャ設計書 §2.1, §3.2 の検証
+        """
         test_node = MeaningID(
             meaning_id="M_TEST_001",
             canonical_name={"ja": "テスト概念", "en": "Test Concept"},
@@ -67,7 +59,10 @@ class TestGraphDBManager:
         )
 
     def test_create_relationship(self):
-        """Relationship（関係性）作成機能のテスト"""
+        """
+        [正常系/存在の連動性] Relationship作成機能をテスト
+        Aruism認知アーキテクチャ設計書 §2.4, §3.4 の検証
+        """
         test_rel = Relationship(
             source_meaning_id="M_SRC_001",
             target_meaning_id="M_TGT_001",
@@ -83,10 +78,9 @@ class TestGraphDBManager:
 
     def test_connection_failure(self):
         """
-        [異常系テスト] データベースへの接続が失敗するケースをテスト
-        GraphDatabase.driverが例外を発生させた場合に、
-        self.driverがNoneのままであることを確認する。
+        [異常系] データベースへの接続が失敗するケースをテスト
         """
+        # ▼▼▼ [修正点] patchのパスを 'aruism_ai.' 基準に統一 ▼▼▼
         with patch('aruism_ai.ontology.db_manager.GraphDatabase.driver') as mock_failing_driver:
             mock_failing_driver.side_effect = ConnectionError("DB接続失敗の模擬エラー")
             failed_manager = GraphDBManager(TEST_URI, TEST_USER, TEST_PASSWORD)
