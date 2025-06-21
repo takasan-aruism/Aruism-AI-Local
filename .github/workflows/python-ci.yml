@@ -1,0 +1,39 @@
+# GitHub Actions Workflow for Aruism AI Project CI
+
+name: Aruism AI - Python CI
+
+# このワークフローが実行されるタイミングを定義
+on:
+  # 'main'または'develop'ブランチにプッシュされた時に実行
+  push:
+    branches: [ "main", "develop" ]
+  # GitHubの画面から手動で実行することも可能にする
+  workflow_dispatch:
+
+jobs:
+  # 'build'という名前のジョブを定義
+  build:
+    # 'ubuntu-latest'（最新のUbuntu）の仮想マシン上で実行
+    runs-on: ubuntu-latest
+
+    steps:
+    # ステップ1: リポジトリのコードをチェックアウト（ダウンロード）
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # ステップ2: Python環境のセットアップ
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    # ステップ3: 依存ライブラリのインストール
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    # ステップ4: pytestによるテストの実行
+    - name: Test with pytest
+      run: |
+        pytest
