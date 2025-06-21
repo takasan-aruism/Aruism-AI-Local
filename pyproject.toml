@@ -1,0 +1,17 @@
+[project]
+name = "aruism-ai-local"
+version = "0.1.0"
+authors = [
+# ↓↓↓ 創設者殿、お手数ですが、有効なメールアドレスをご記入ください
+{ name = "Taka", email = "taka.urakami1979@gmauk.com" },
+]
+description = "A local AI embodiment of the Aruism philosophy."
+requires-python = ">=3.9"
+dependencies = [
+"neo4j",
+"pytest",
+# 今後追加するライブラリはここに追記
+]
+
+[tool.setuptools.packages.find]
+where = ["src"] # ソースコードが 'src' ディレクトリにあることを明示
