@@ -16,49 +16,41 @@ import sys
 sys.path.append(os.getcwd())
 
 from aruism_ai.ontology.db_manager import GraphDBManager
-from janome.tokenizer import Tokenizer # ★ 形態素解析のために追加
+from janome.tokenizer import Tokenizer
 
 class SymmetryEngine:
-    """
-    存在の対称性の原則に基づいた推論を行うエンジン。
-    """
+    # ( __init__ は変更なし )
     def __init__(self, db_manager: GraphDBManager):
         self.db_manager = db_manager
-        self.tokenizer = Tokenizer() # ★ トークナイザを初期化
+        self.tokenizer = Tokenizer()
         if self.db_manager.driver is None:
             raise ConnectionError("データベースドライバーが初期化されていません。")
-        print("SymmetryEngineが初期化されました。")
 
-    def generate_inverted_question(self, concept_name_ja: str):
-        """
-        指定された日本語の概念名から、対称的な概念を探し出し、
-        反転質問を生成します。
-        """
-        print(f"\n--- 「{concept_name_ja}」に対する反転質問を生成します ---")
-
+    def generate_inverted_question(self, concept_name_ja: str) -> str | None:
         query = (
             "MATCH (a:Meaning {canonical_name_ja: $concept_name})-[r:Symmetric_To]-(b:Meaning) "
             "RETURN b.canonical_name_ja AS symmetric_name"
         )
-        
         def work(tx, name):
             result = tx.run(query, concept_name=name)
             record = result.single()
             return record["symmetric_name"] if record else None
-
-        with self.db_manager.driver.session() as session:
-            symmetric_name = session.execute_read(work, concept_name_ja)
+        
+        # ▼▼▼ [修正点] DBエラーを捕捉する try...exceptブロックを追加 ▼▼▼
+        try:
+            with self.db_manager.driver.session() as session:
+                symmetric_name = session.execute_read(work, concept_name_ja)
             
-            if symmetric_name:
-                question = f"もし、「{concept_name_ja}」の対称的な存在である「{symmetric_name}」の視点から考えると、どのような意味や価値が見えてくるでしょうか？"
-                print("反転質問を生成しました。")
-                return question
-            else:
-                print("対称的な概念が見つかりませんでした。")
-                return None
+                if symmetric_name:
+                    return f"もし、「{concept_name_ja}」の対称的な存在である「{symmetric_name}」の視点から考えると、どのような意味や価値が見えてくるでしょうか？"
+                else:
+                    return None
+        except Exception as e:
+            print(f"Error during generate_inverted_question: {e}")
+            # エラーが発生した場合は、元の例外を再発生させるか、カスタム例外を発生させる
+            raise e
 
-    # ★★★ ここからが新しいメソッドです ★★★
-    def detect_tension(self, text: str):
+    def detect_tension(self, text: str) -> tuple[bool, tuple[str, str] | None]:
         """
         与えられたテキストの中に、対称的な概念ペアが含まれているか（緊張関係か）を検出します。
         :param text: 分析するテキスト
