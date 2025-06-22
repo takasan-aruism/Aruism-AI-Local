@@ -1,139 +1,116 @@
 ######################################################################
 # Aruism AI Project - Graph Database Manager
 #
-# このファイルは、models.pyで定義されたデータモデルと
-# Neo4jグラフデータベースとの間のやり取りを管理するクラスを定義します。
-#
-# 参照ドキュメント: Aruism_AI_Project_11_Cognitive_Architecture_Design.txt
-# バージョン: 0.2
-# 作成日: 2025-06-18
+# バージョン: 2.0 (新Conceptモデル対応版)
+# 最終更新日: 2025-06-22
 ######################################################################
 
-import os
+from .models import Concept, Relationship
 from neo4j import GraphDatabase
-# ★ 修正点: Relationshipもインポートリストに追加します
-from .models import MeaningID, Relationship
 
 class GraphDBManager:
     """
     Neo4jグラフデータベースとの接続と操作を管理するクラス。
     """
     def __init__(self, uri, user, password):
-        """
-        データベースへの接続を初期化します。
-        """
+        # [修正] このクラスではneo4jドライバを直接インポートしない
         try:
             self.driver = GraphDatabase.driver(uri, auth=(user, password))
-            print("データベースへの接続に成功しました。")
         except Exception as e:
             print(f"データベースへの接続に失敗しました: {e}")
             self.driver = None
 
     def close(self):
-        """
-        データベース接続を閉じます。
-        """
         if self.driver is not None:
             self.driver.close()
-            print("データベース接続を閉じました。")
-    def execute_query(self, query):
-        """
-        任意の読み取り/書き込みクエリを実行します。
-        主にデータベースのクリアなど、管理用に使用します。
-        """
+
+    def execute_query(self, query: str):
         if self.driver is None:
             print("ドライバーが初期化されていません。")
             return
-            
         with self.driver.session() as session:
             session.run(query)
 
-    def create_meaning_node(self, node: MeaningID):
-        """
-        MeaningIDオブジェクトから、グラフデータベースにノードを作成します。
-        """
+    # [修正] 型ヒントを Concept に変更
+    def create_meaning_node(self, node: Concept):
         if self.driver is None:
             print("ドライバーが初期化されていません。")
             return
-
         with self.driver.session() as session:
-            result = session.execute_write(self._create_and_return_node, node)
-            print(f"ノードを作成しました: {result}")
+            session.execute_write(self._create_and_return_node, node)
 
-    # ★ 修正点: このメソッド全体をクラス内に正しくインデントします
+    # [修正] 型ヒントを Relationship に合わせる
     def create_relationship(self, rel: Relationship):
-        """
-        Relationshipオブジェクトから、グラフデータベースに関係性を作成します。
-        """
         if self.driver is None:
             print("ドライバーが初期化されていません。")
             return
-
         with self.driver.session() as session:
-            # ★ 修正点: こちらも execute_write に統一します
             session.execute_write(self._create_and_return_relationship, rel)
 
-    # ★ 修正点: このメソッド全体をクラス内に正しくインデントします
     @staticmethod
     def _create_and_return_relationship(tx, rel: Relationship):
-        """
-        関係性を作成するためのトランザクション関数。
-        """
-        properties = {
-            "strength": rel.strength,
-        }
-        if rel.source_of_data:
-            properties["source_of_data"] = rel.source_of_data
-        if rel.valid_under_axis_id:
-            properties["valid_under_axis_id"] = rel.valid_under_axis_id
-        
+        # [修正] source/target のID名をモデルに合わせて変更
         query = (
-            "MATCH (a:Meaning {meaning_id: $source_id}), (b:Meaning {meaning_id: $target_id}) "
-            f"MERGE (a)-[r:{rel.relationship_type}]->(b) "
+            "MATCH (a:Concept {concept_id: $source_id}), (b:Concept {concept_id: $target_id}) "
+            f"MERGE (a)-[r:`{rel.relationship_type}`]->(b) "
             "SET r += $props"
         )
-        
-        tx.run(query, source_id=rel.source_meaning_id, target_id=rel.target_meaning_id, props=properties)
+        props = {"strength": rel.strength}
+        if rel.axis:
+            props["axis"] = rel.axis
+        if rel.source_of_data:
+            props["source_of_data"] = rel.source_of_data
 
+        tx.run(query, source_id=rel.source_concept_id, target_id=rel.target_concept_id, props=props)
+
+    # ▼▼▼ [最重要修正点] 新しいConceptモデルの全プロパティを扱えるようにする ▼▼▼
     @staticmethod
-    def _create_and_return_node(tx, node: MeaningID):
+    def _create_and_return_node(tx, node: Concept):
         """
-        ノードを作成するためのトランザクション関数。
+        Conceptオブジェクトから、全てのプロパティをDBノードに設定する。
         """
-        properties = {
-            "is_abstract": node.is_abstract,
-        }
-        for key, value in node.canonical_name.items():
-            properties[f"canonical_name_{key}"] = value
-        for key, value in node.description.items():
-            properties[f"description_{key}"] = value
-        if node.aruism_principle_link:
-            properties["aruism_principle_link"] = node.aruism_principle_link
-        # external_identifiersもプロパティに追加
-        for key, value in node.external_identifiers.items():
-            properties[f"external_identifiers_{key}"] = value
-
+        # MERGEクエリでノードの存在を確認・作成し、IDを基準とする
+        # SETクエリで、全てのプロパティを一度に設定する
         query = (
-            "MERGE (m:Meaning {meaning_id: $meaning_id}) "
-            "SET m += $props "
-            "RETURN m.meaning_id AS meaning_id, m.canonical_name_ja AS name"
+            "MERGE (c:Concept {concept_id: $concept_id}) "
+            "SET c += $props "
+            "RETURN c.concept_id AS concept_id"
         )
         
-        result = tx.run(query, meaning_id=node.meaning_id, props=properties)
-        return result.single()
+        # Conceptオブジェクトの全プロパティを辞書に変換
+        # dataclasses.asdict を使うと便利だが、手動で制御する
+        props = {
+            "canonical_name_ja": node.canonical_name_ja,
+            "canonical_name_en": node.canonical_name_en,
+            "description_ja": node.description_ja,
+            "description_en": node.description_en,
+            "wordnet_synset_id": node.wordnet_synset_id,
+            "abstraction_level": node.abstraction_level,
+            "aruism_category": node.aruism_category,
+            "resonance_potential": node.resonance_potential,
+            "source": node.source,
+            "confidence": node.confidence,
+            "version": node.version
+        }
+        
+        # Noneのプロパティはクエリに含まないようにする
+        props_without_none = {k: v for k, v in props.items() if v is not None}
+        
+        tx.run(query, concept_id=node.concept_id, props=props_without_none)
+    def update_node_properties(self, concept_id: str, properties: dict):
+            """
+            指定されたconcept_idを持つノードを見つけ、
+            与えられたプロパティ辞書の内容で更新（追加）する。
+            """
+            if self.driver is None or not properties:
+                return
 
+            def work(tx, c_id, props):
+                query = (
+                    "MATCH (c:Concept {concept_id: $concept_id}) "
+                    "SET c += $props"
+                )
+                tx.run(query, concept_id=c_id, props=props)
 
-# このファイルが直接実行された場合にのみ以下のコードが動きます（テスト用）
-if __name__ == '__main__':
-    # Neo4j Desktopで設定したURI、ユーザー名、パスワードを指定してください。
-    NEO4J_URI = "neo4j://localhost:7687"
-    NEO4J_USER = "neo4j"
-    NEO4J_PASSWORD = "11dr34SSAAa_$$aae"  # ご自身のパスワードに変更してください
-
-    db_manager = GraphDBManager(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
-
-    if db_manager.driver:
-        # このファイル単体で実行しても、現在は何もしないようにします。
-        # 実際の動作は wordnet_importer.py から呼び出して確認します。
-        print("db_manager.py は正常に読み込み可能です。")
-        db_manager.close()
+            with self.driver.session() as session:
+                session.execute_write(work, concept_id, properties)

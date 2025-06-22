@@ -1,8 +1,8 @@
 ######################################################################
 # Aruism AI Project - Aruistic Retriever
 #
-# バージョン: 0.2 (retrieveアルゴリズム実装)
-# 最終更新日: 2025-06-22
+# バージョン: 1.0 (複数概念の処理アルゴリズム実装)
+# 作成日: 2025-06-22
 ######################################################################
 
 from janome.tokenizer import Tokenizer
@@ -11,7 +11,6 @@ from aruism_ai.reasoning.symmetry_engine import SymmetryEngine
 from aruism_ai.reasoning.causal_engine import CausalEngine
 
 class AruisticRetriever:
-    # (__init__ は変更なし)
     def __init__(self, hierarchy_engine: HierarchyEngine, symmetry_engine: SymmetryEngine, causal_engine: CausalEngine):
         self.tokenizer = Tokenizer()
         self.hierarchy_engine = hierarchy_engine
@@ -24,7 +23,7 @@ class AruisticRetriever:
         """
         # ▼▼▼ [新機能] ここからが新しいアルゴリズムです ▼▼▼
         
-        # 1. テキストから主要概念（名詞）を抽出
+        # 1. テキストから主要概念（重複を除いた名詞）を抽出
         tokens = self.tokenizer.tokenize(query_text)
         main_concepts_text = list(dict.fromkeys(
             [token.surface for token in tokens if token.part_of_speech.startswith('名詞')]
