@@ -15,9 +15,11 @@ class Concept:
     存在の核：すべてのユニークな概念（「存在」）を表すクラス。
     新DBスキーマに準拠した、リッチなプロパティを持つ。
     """
-    concept_id: str  # C_LOVE_001, M_ARU_001 など
+    concept_id: str
     canonical_name_ja: str
     
+    symbol: Optional[str] = None
+    category: Optional[str] = None
     # [新プロパティ] 
     canonical_name_en: Optional[str] = None
     description_ja: Optional[str] = None

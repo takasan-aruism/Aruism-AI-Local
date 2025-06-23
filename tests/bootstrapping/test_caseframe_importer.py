@@ -40,8 +40,8 @@ class TestCaseFrameImporter:
             importer = CaseFrameImporter(mock_db_manager)
             importer.run_import("dummy/path/to/file.xml.gz")
 
-        assert mock_db_manager.create_meaning_node.call_count == 2
-        assert mock_db_manager.create_relationship.call_count == 1
+            assert mock_db_manager.create_concept_node.call_count == 2
+            assert mock_db_manager.create_relationship.call_count == 1
         
         args, kwargs = mock_db_manager.create_relationship.call_args
         created_rel = args[0]

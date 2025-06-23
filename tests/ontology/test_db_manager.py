@@ -42,7 +42,7 @@ class TestGraphDBManager:
         
         mock_session = self.mock_driver_instance.session.return_value.__enter__.return_value
         
-        self.db_manager.create_meaning_node(test_node)
+        self.db_manager.create_concept_node(test_node)
         
         mock_session.execute_write.assert_called_once_with(
             self.db_manager._create_and_return_node, test_node
@@ -82,7 +82,7 @@ class TestGraphDBManager:
         mock_session.execute_write.side_effect = lambda work_func, node: work_func(mock_tx, node)
         
         # 3. メソッド実行
-        self.db_manager.create_meaning_node(rich_concept)
+        self.db_manager.create_concept_node(rich_concept)
 
         # 4. 検証：runメソッドが正しいプロパティで呼ばれたかを確認
         mock_tx.run.assert_called_once()

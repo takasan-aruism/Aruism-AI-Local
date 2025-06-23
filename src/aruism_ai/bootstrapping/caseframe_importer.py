@@ -43,8 +43,8 @@ class CaseFrameImporter:
                 canonical_name_ja=parsed_name,
                 source=[source]
             )
-            self.db_manager.create_meaning_node(node)
-            self.imported_concepts.add(parsed_name)
+        self.db_manager.create_concept_node(node)
+        self.imported_concepts.add(parsed_name)
     def _normalize_relationship_type(self, case_name: str) -> str:
         """
         "必須格(属性)格" のような文字列から、Cypherで無効な文字を除去する。
