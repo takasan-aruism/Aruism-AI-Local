@@ -90,3 +90,37 @@ class GraphDBManager:
         }
         props_without_none = {k: v for k, v in props.items() if v is not None}
         tx.run(query, concept_id=node.concept_id, props=props_without_none)
+       
+    def update_node_properties_by_wordnet_id(self, wordnet_id: str, properties: dict):
+        """
+        指定されたwordnet_synset_idを持つノードを見つけ、プロパティを更新する。
+        """
+        if self.driver is None or not properties:
+            return
+
+        def work(tx, w_id, props):
+            query = (
+                "MATCH (c:Concept {wordnet_synset_id: $wordnet_id}) "
+                "SET c += $props"
+            )
+            tx.run(query, wordnet_id=w_id, props=props)
+
+        with self.driver.session() as session:
+            session.execute_write(work, wordnet_id, properties)
+
+    def update_node_properties_by_wordnet_id(self, wordnet_id: str, properties: dict):
+        """
+        指定されたwordnet_synset_idを持つノードを見つけ、プロパティを更新する。
+        """
+        if self.driver is None or not properties:
+            return
+
+        def work(tx, w_id, props):
+            query = (
+                "MATCH (c:Concept {wordnet_synset_id: $wordnet_id}) "
+                "SET c += $props"
+            )
+            tx.run(query, wordnet_id=w_id, props=props)
+
+        with self.driver.session() as session:
+            session.execute_write(work, wordnet_id, properties)
