@@ -59,7 +59,7 @@ class WordNetStreamingImporter:
             
             result = self.db_manager.execute_query(
                 query, 
-                {"skip": offset, "limit": self.batch_size}
+                skip=offset, limit=self.batch_size
             )
             
             if not result:

@@ -1,15 +1,14 @@
 ######################################################################
 # Aruism AI Project - CaseFrame Importer
 #
-# バージョン: 1.0 (メインエンジン実装版)
-# 作成日: 2025-06-23
+# バージョン: 1.1 (バグ修正・整合性確保版)
+# 作成日: 2025-06-25
 ######################################################################
 import xml.etree.ElementTree as ET
 import gzip
 from tqdm import tqdm
 import logging
 import os
-import re
 
 from aruism_ai.ontology.db_manager import GraphDBManager
 from aruism_ai.ontology.models import Concept, Relationship
@@ -40,9 +39,9 @@ class CaseFrameImporter:
         parsed_name = self._parse_name(concept_name)
         if parsed_name and parsed_name not in self.processed_concepts:
             node = Concept(
-                concept_id=parsed_name, # 簡略化のため、名前をそのままIDとして使用
+                concept_id=parsed_name,
                 canonical_name_ja=parsed_name,
-                source=["caseframe_import"]
+                source_of_data=["caseframe_import"]
             )
             self.db_manager.create_concept_node(node)
             self.processed_concepts.add(parsed_name)
@@ -56,7 +55,6 @@ class CaseFrameImporter:
         print(f"\n--- 格フレームファイル({filepath})のインポートを開始します ---")
         
         try:
-            # 1. gzipファイルを逐次的に読み込む
             with gzip.open(filepath, 'rb') as f:
                 context = ET.iterparse(f, events=('end',))
                 for _, elem in tqdm(context, desc="格フレームを解析・インポート中"):
@@ -73,7 +71,8 @@ class CaseFrameImporter:
                                 
                                 for component_node in argument_node.findall('component'):
                                     component_raw = component_node.text
-                                    frequency = component_node.get('frequency', '0')
+                                    # frequencyは現在未使用だが、将来のために保持
+                                    # frequency = component_node.get('frequency', '0')
                                     
                                     self._create_concept_if_not_exists(component_raw)
                                     
@@ -81,11 +80,9 @@ class CaseFrameImporter:
                                         source_concept_id=headword,
                                         target_concept_id=self._parse_name(component_raw),
                                         relationship_type=case_type,
-                                        strength=float(frequency),
                                         source_of_data="KyotoUniv_NCF"
                                     )
                                     self.db_manager.create_relationship(rel)
-                        # メモリ解放
                         elem.clear()
 
             print("\n--- 格フレームのインポートが完了しました ---")
@@ -95,6 +92,17 @@ class CaseFrameImporter:
         except Exception as e:
             logging.error(f"予期せぬエラーが発生しました: {e}", exc_info=True)
 
+if __name__ == '__main__':
+    # （実行ブロックは変更なし）
+    db_manager = None
+    try:
+        # ... (省略)
+        pass
+    except Exception as e:
+        print(f"メイン処理でエラーが発生しました: {e}")
+    finally:
+        if db_manager:
+            db_manager.close()
 if __name__ == '__main__':
     db_manager = None
     try:

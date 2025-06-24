@@ -78,15 +78,12 @@ class GenesisImporter:
         """概念ノードをバッチで作成"""
         query = """
         UNWIND $concepts as concept
-        CREATE (n:Concept {
-            concept_id: concept.concept_id,
-            symbol: concept.symbol,
-            canonical_name_ja: concept.canonical_name_ja,
-            category: concept.category,
-            source_of_data: concept.source_of_data
-        })
+        CREATE (n:Concept)  set n = concept
         """
-        
+        concepts_data = [c.to_dict() for c in concepts_batch]
+        # 【修正点】キーワード引数として渡す
+        self.db_manager.execute_query(query, concepts=concepts_data)
+
         concepts_data = [{
             'concept_id': c.concept_id,
             'symbol': c.symbol,
@@ -101,19 +98,15 @@ class GenesisImporter:
         """関係性をバッチで作成"""
         query = """
         UNWIND $relationships as rel
-        MATCH (source:Concept {concept_id: rel.source_id})
-        MATCH (target:Concept {concept_id: rel.target_id})
-        CREATE (source)-[:Symmetric_To {
-            source_of_data: rel.source_of_data
-        }]->(target)
+        MATCH (source:Concept {concept_id: rel.source_concept_id})
+        MATCH (target:Concept {concept_id: rel.target_concept_id})
+        CREATE (source)-[:Symmetric_To {source_of_data: rel.source_of_data}]->(target)
         """
         
-        relationships_data = [{
-            'source_id': r.source_concept_id,
-            'target_id': r.target_concept_id,
-            'source_of_data': r.source_of_data
-        } for r in relationships_batch]
-        
+        relationships_data = [r.to_dict() for r in relationships_batch]
+        # 【修正点】キーワード引数として渡す
+        self.db_manager.execute_query(query, relationships=relationships_data)
+                
         self.db_manager.execute_query(query, {"relationships": relationships_data})
 
     def run_import(self, filepath: str):

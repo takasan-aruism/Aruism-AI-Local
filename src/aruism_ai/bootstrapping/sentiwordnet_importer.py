@@ -21,59 +21,36 @@ def find_project_root(marker_file='pyproject.toml'):
             raise FileNotFoundError(f"Project root with '{marker_file}' not found.")
         current_path = parent_path
 
+# （ファイルの先頭部分は変更なし）
 class SentiWordNetImporter:
     def __init__(self, db_manager: GraphDBManager):
         self.db_manager = db_manager
 
-    def run_update(self, sentiwordnet_path: str):
-        """
-        SentiWordNetファイルを解析し、データベースのノードプロパティを更新します。
-        """
-        if not self.db_manager:
-            logging.error("DBManagerが提供されていません。")
-            return
+    def run_update(self, filepath: str):
+        updates_batch = []
+        with open(filepath, 'r') as f:
+            for line in tqdm(f, desc="SentiWordNetを解析中"):
+                if line.startswith('#') or not line.strip():
+                    continue
+                
+                parts = line.strip().split('\t')
+                pos, offset, pos_score, neg_score, terms, gloss = parts
+                wordnet_synset_id = f"{offset:0>8}-{pos}"
 
-        print("\n--- SentiWordNetのスコア更新を開始します ---")
-        updated_count = 0
-        try:
-            with open(sentiwordnet_path, 'r', encoding='utf-8') as f:
-                for line in tqdm(f, desc="SentiWordNetを解析中"):
-                    if line.strip().startswith('#') or not line.strip():
-                        continue
-                    
-                    parts = line.strip().split('\t')
-                    if len(parts) < 5: continue
-                        
-                    pos, offset_id, pos_score_str, neg_score_str = parts[0], parts[1], parts[2], parts[3]
-                    
-                    try:
-                        pos_score = float(pos_score_str)
-                        neg_score = float(neg_score_str)
-                    except ValueError:
-                        continue
-
-                    if pos_score == 0.0 and neg_score == 0.0:
-                        continue
-                        
-                    # WordNetのsynset ID形式に変換
-                    wordnet_synset_id = f"{offset_id.zfill(8)}-{pos}"
-                    
-                    # 更新するプロパティの辞書を作成
-                    properties_to_update = {
-                        "sentiment_positive": pos_score,
-                        "sentiment_negative": neg_score
+                if float(pos_score) > 0 or float(neg_score) > 0:
+                    properties = {
+                        "sentiment_positive": float(pos_score),
+                        "sentiment_negative": float(neg_score),
                     }
-                    
-                    # WordNet IDをキーにして、対応するノードのプロパティを更新
-                    self.db_manager.update_node_properties_by_wordnet_id(wordnet_synset_id, properties_to_update)
-                    updated_count += 1
-                        
-            print(f"--- {updated_count}件のノードに感情スコアを付与しました ---")
-        except FileNotFoundError:
-            logging.error(f"エラー: SentiWordNetファイルが見つかりません。パス: {sentiwordnet_path}")
-        except Exception as e:
-            logging.error(f"エラーが発生しました: {e}", exc_info=True)
-
+                    updates_batch.append({
+                        "wordnet_synset_id": wordnet_synset_id,
+                        "properties": properties
+                    })
+        
+        if updates_batch:
+            print(f"\n--- SentiWordNetのスコア更新を開始します（{len(updates_batch)}件）---")
+            # 新しいバッチメソッドを呼び出す
+            self.db_manager.batch_update_node_properties_by_synset(updates_batch)
 if __name__ == '__main__':
     db_manager = None
     try:
