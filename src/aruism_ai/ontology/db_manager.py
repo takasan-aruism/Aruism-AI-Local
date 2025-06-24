@@ -1,126 +1,141 @@
 ######################################################################
 # Aruism AI Project - Graph Database Manager
+# Neo4jデータベースとの全てのやり取りを管理する
 #
-# バージョン: 2.2 (create_concept_nodeへのメソッド名変更)
-# 最終更新日: 2025-06-23
+# バージョン: 2.1 (メソッド名修正版)
+# 作成日: 2025-06-25 (再構築・修正)
 ######################################################################
+import logging
+from typing import List, Dict, Any, Optional
+from neo4j import GraphDatabase, Driver, exceptions
 
-from neo4j import GraphDatabase
 from .models import Concept, Relationship
 
 class GraphDBManager:
-    """
-    Neo4jグラフデータベースとの接続と操作を管理するクラス。
-    """
-    def __init__(self, uri, user, password):
+    """Neo4jデータベースとの接続と操作を管理するクラス"""
+
+    def __init__(self, uri: str, user: str, password: str | None):
+        """
+        GraphDBManagerを初期化し、Neo4jドライバを確立する
+        """
+        self.driver: Optional[Driver] = None
         try:
             self.driver = GraphDatabase.driver(uri, auth=(user, password))
+            self.driver.verify_connectivity()
+            logging.info(f"Neo4jデータベースへの接続に成功しました: {uri}")
+        except exceptions.AuthError as e:
+            logging.error(f"Neo4jデータベースの認証に失敗しました: {e}")
+        except exceptions.ServiceUnavailable as e:
+            logging.error(f"Neo4jデータベースに接続できませんでした: {e}")
         except Exception as e:
-            print(f"データベースへの接続に失敗しました: {e}")
-            self.driver = None
+            logging.error(f"予期せぬエラーでNeo4jへの接続に失敗しました: {e}")
 
     def close(self):
-        if self.driver is not None:
+        """データベースドライバを閉じる"""
+        if self.driver:
             self.driver.close()
+            logging.info("Neo4jデータベース接続を閉じました。")
 
-    def execute_query(self, query: str):
-        if self.driver is None: return
-        with self.driver.session() as session:
-            session.run(query)
+    def execute_query(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """
+        与えられたCypherクエリを実行し、結果を返す
+        【変更点】プライベートメソッド(_execute_query)から公開メソッド(execute_query)に変更
+        """
+        if not self.driver:
+            logging.error("データベースドライバが利用できません。クエリを実行できません。")
+            return []
+            
+        try:
+            with self.driver.session() as session:
+                result = session.run(query, parameters or {})
+                return result.data()
+        except exceptions.CypherSyntaxError as e:
+            logging.error(f"Cypherクエリの構文エラー: {e.query}", exc_info=True)
+        except Exception as e:
+            logging.error(f"クエリ実行中にエラーが発生しました: {e}", exc_info=True)
+        return []
 
-    # ▼▼▼ [修正点] メソッド名を create_meaning_node から create_concept_node に変更 ▼▼▼
-    def create_concept_node(self, node: Concept):
-        if self.driver is None: return
-        with self.driver.session() as session:
-            session.execute_write(self._create_and_return_node, node)
+    def create_concept_node(self, concept: Concept):
+        """単一のConceptノードを作成またはマージする"""
+        query = """
+        MERGE (c:Concept {concept_id: $concept_id})
+        ON CREATE SET c += $props
+        ON MATCH SET c += $props
+        """
+        props = concept.to_dict()
+        concept_id = props.pop('concept_id')
+        parameters = {'concept_id': concept_id, 'props': props}
+        self.execute_query(query, parameters)
+
+    def update_node_properties(self, concept_id: str, properties: Dict[str, Any]):
+        """既存のノードにプロパティを追記・更新する"""
+        query = """
+        MATCH (c:Concept {concept_id: $concept_id})
+        SET c += $properties
+        """
+        self.execute_query(query, parameters={'concept_id': concept_id, 'properties': properties})
 
     def create_relationship(self, rel: Relationship):
-        if self.driver is None: return
-        with self.driver.session() as session:
-            session.execute_write(self._create_and_return_relationship, rel)
-            
-    def update_node_properties(self, concept_id: str, properties: dict):
-        if self.driver is None or not properties: return
-        def work(tx, c_id, props):
-            query = (
-                "MATCH (c:Concept {concept_id: $concept_id}) "
-                "SET c += $props"
-            )
-            tx.run(query, concept_id=c_id, props=props)
-        with self.driver.session() as session:
-            session.execute_write(work, concept_id, properties)
+        """単一の関係性を作成またはマージする"""
+        query = f"""
+        MATCH (source:Concept {{concept_id: $source_id}})
+        MATCH (target:Concept {{concept_id: $target_id}})
+        MERGE (source)-[r:{rel.relationship_type}]->(target)
+        ON CREATE SET r += $props
+        ON MATCH SET r += $props
+        """
+        props = rel.to_dict()
+        source_id = props.pop('source_concept_id')
+        target_id = props.pop('target_concept_id')
+        props.pop('relationship_type')
 
-    @staticmethod
-    def _create_and_return_relationship(tx, rel: Relationship):
-        query = (
-            "MATCH (a:Concept {concept_id: $source_id}), (b:Concept {concept_id: $target_id}) "
-            f"MERGE (a)-[r:`{rel.relationship_type}`]->(b) "
-            "SET r += $props"
-        )
-        props = {"strength": rel.strength}
-        if rel.axis:
-            props["axis"] = rel.axis
-        if rel.source_of_data:
-            props["source_of_data"] = rel.source_of_data
-        tx.run(query, source_id=rel.source_concept_id, target_id=rel.target_concept_id, props=props)
-
-    @staticmethod
-    def _create_and_return_node(tx, node: Concept):
-        query = (
-            "MERGE (c:Concept {concept_id: $concept_id}) "
-            "SET c += $props "
-            "RETURN c.concept_id AS concept_id"
-        )
-        props = {
-            "canonical_name_ja": node.canonical_name_ja,
-            "symbol": node.symbol,
-            "category": node.category,
-            "canonical_name_en": node.canonical_name_en,
-            "description_ja": node.description_ja,
-            "description_en": node.description_en,
-            "wordnet_synset_id": node.wordnet_synset_id,
-            "abstraction_level": node.abstraction_level,
-            "aruism_category": node.aruism_category,
-            "resonance_potential": node.resonance_potential,
-            "source": node.source,
-            "confidence": node.confidence,
-            "version": node.version,
-            "sentiment_positive": node.sentiment_positive,
-            "sentiment_negative": node.sentiment_negative,
+        parameters = {
+            'source_id': source_id,
+            'target_id': target_id,
+            'props': props
         }
-        props_without_none = {k: v for k, v in props.items() if v is not None}
-        tx.run(query, concept_id=node.concept_id, props=props_without_none)
-       
-    def update_node_properties_by_wordnet_id(self, wordnet_id: str, properties: dict):
+        self.execute_query(query, parameters)
+
+    def get_all_genesis_concepts(self) -> List[Dict[str, str]]:
+        """Genesis Importerによって作成された全ての概念を取得する"""
+        query = """
+        MATCH (c:Concept)
+        WHERE c.source_of_data = 'AruismBaseDBTable_Genesis'
+        RETURN c.concept_id AS concept_id, c.canonical_name_ja AS name
         """
-        指定されたwordnet_synset_idを持つノードを見つけ、プロパティを更新する。
+        return self.execute_query(query)
+
+    def batch_update_node_properties(self, batch: List[Dict[str, Any]]):
+        """ノードのプロパティをバッチで更新する"""
+        query = """
+        UNWIND $batch AS row
+        MATCH (c:Concept {concept_id: row.concept_id})
+        SET c += row.properties
         """
-        if self.driver is None or not properties:
-            return
+        self.execute_query(query, parameters={'batch': batch})
 
-        def work(tx, w_id, props):
-            query = (
-                "MATCH (c:Concept {wordnet_synset_id: $wordnet_id}) "
-                "SET c += $props"
-            )
-            tx.run(query, wordnet_id=w_id, props=props)
-
-        with self.driver.session() as session:
-            session.execute_write(work, wordnet_id, properties)
-
-    def update_node_properties_by_wordnet_id(self, wordnet_id: str, properties: dict):
+    def batch_create_concept_nodes(self, batch: List[Dict[str, Any]]):
+       """Conceptノードをバッチで作成（既に存在する場合はプロパティをマージ）"""
+def batch_create_concept_nodes(self, batch: List[Dict[str, Any]]):
+    """Conceptノードをバッチで作成（既に存在する場合はプロパティをマージ）"""
+    query = """
+    UNWIND $batch AS row
+    MERGE (c:Concept {concept_id: row.concept_id})
+    ON CREATE SET c.canonical_name_ja = row.canonical_name_ja,
+                  c.description_en = row.description_en,
+                  c.source_of_data = row.source_of_data  # ここを修正
+    ON MATCH SET c.canonical_name_ja = COALESCE(c.canonical_name_ja, row.canonical_name_ja),
+                 c.description_en = COALESCE(c.description_en, row.description_en),
+                 c.source_of_data = c.source_of_data + row.source_of_data # ここを修正 (リストの結合)
+    """
+    self.execute_query(query, parameters={'batch': batch})
+    def batch_create_relationships(self, batch: List[Dict[str, Any]]):
+        """関係性をバッチで作成"""
+        query = """
+        UNWIND $batch AS row
+        MATCH (source:Concept {concept_id: row.source_id})
+        MATCH (target:Concept {concept_id: row.target_id})
+        MERGE (source)-[r:Is_A]->(target)
+        ON CREATE SET r.source_of_data = 'WordNet_Import'
         """
-        指定されたwordnet_synset_idを持つノードを見つけ、プロパティを更新する。
-        """
-        if self.driver is None or not properties:
-            return
-
-        def work(tx, w_id, props):
-            query = (
-                "MATCH (c:Concept {wordnet_synset_id: $wordnet_id}) "
-                "SET c += $props"
-            )
-            tx.run(query, wordnet_id=w_id, props=props)
-
-        with self.driver.session() as session:
-            session.execute_write(work, wordnet_id, properties)
+        self.execute_query(query, parameters={'batch': batch})

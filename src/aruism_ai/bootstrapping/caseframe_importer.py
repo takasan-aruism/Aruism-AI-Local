@@ -99,7 +99,7 @@ if __name__ == '__main__':
     db_manager = None
     try:
         PROJECT_ROOT = find_project_root()
-        CASEFRAME_PATH = os.path.join(PROJECT_ROOT, "data", "kyoto-univ-web-ncf-1.0.xml.gz")
+        CASEFRAME_PATH = os.path.join(PROJECT_ROOT, "data", "kyoto-univ-web-ncf-0.5.xml.gz")
         
         if not os.path.exists(CASEFRAME_PATH):
             unzipped_path = CASEFRAME_PATH.replace(".gz", "")

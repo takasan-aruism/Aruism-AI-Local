@@ -1,45 +1,43 @@
 ######################################################################
 # Aruism AI Project - Ontological Data Models
 #
-# バージョン: 2.0 (新DBスキーマ準拠版)
-# 最終更新日: 2025-06-22
+# バージョン: 2.1 (プロパティ名修正版)
+# 最終更新日: 2025-06-25
 ######################################################################
 
 from dataclasses import dataclass, field
 from typing import Dict, Optional, List
 
-# [改名] MeaningID -> Concept
 @dataclass
 class Concept:
     """
     存在の核：すべてのユニークな概念（「存在」）を表すクラス。
-    新DBスキーマに準拠した、リッチなプロパティを持つ。
     """
     concept_id: str
     canonical_name_ja: str
     
     symbol: Optional[str] = None
     category: Optional[str] = None
-    # [新プロパティ] 
     canonical_name_en: Optional[str] = None
     description_ja: Optional[str] = None
     description_en: Optional[str] = None
-    
-    # WordNet連携用
     wordnet_synset_id: Optional[str] = None
-    
-    # アリズム哲学プロパティ
-    abstraction_level: Optional[int] = None # 1=具体的, 5=抽象的
-    aruism_category: Optional[str] = None   # 例: 感情, 物理法則
+    abstraction_level: Optional[int] = None
+    aruism_category: Optional[str] = None
     resonance_potential: Optional[float] = None
-
-    # メタデータ
-    source: List[str] = field(default_factory=list) # "manual", "wordnet", "user"
+    
+    # 【変更点】プロパティ名を'source'から'source_of_data'に変更し、型もList[str]に統一
+    source_of_data: List[str] = field(default_factory=list)
+    
     confidence: float = 1.0
     version: int = 1
-    
     sentiment_positive: Optional[float] = None
     sentiment_negative: Optional[float] = None
+
+    def to_dict(self) -> Dict:
+        """dataclassを辞書に変換する（None値は除外）"""
+        return {k: v for k, v in self.__dict__.items() if v is not None}
+
 @dataclass
 class Relationship:
     """
@@ -49,15 +47,15 @@ class Relationship:
     target_concept_id: str
     relationship_type: str
     
-    # [新プロパティ] 軸や強度などをリレーションシップに持たせる
     axis: Optional[str] = None
     strength: float = 1.0
     source_of_data: Optional[str] = None
 
+    def to_dict(self) -> Dict:
+        """dataclassを辞書に変換する（None値は除外）"""
+        return {k: v for k, v in self.__dict__.items() if v is not None}
 
-# (Word, AxisDefinition, Userクラスは、今回の変更範囲では使用しないため、
-#  簡潔にするため一旦コメントアウトまたは削除しても構いません。
-#  ここでは、将来の拡張のために残しておきます。)
+# (以下、他のクラスは変更なし)
 
 @dataclass
 class Word:

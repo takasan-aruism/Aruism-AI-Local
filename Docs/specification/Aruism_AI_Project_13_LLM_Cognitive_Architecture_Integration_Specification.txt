@@ -1,5 +1,6 @@
 **ドキュメント名:** `Aruism_AI_Project_13_LLM_Cognitive_Architecture_Integration_Specification.txt`
 **プロジェクト:** Local Aruism AI Development
+# Docment ID:13
 **バージョン:** 1.1
 **最終更新日:** 2025-06-19
 **作成者:** 統括補佐AI Gemini
@@ -16,48 +17,44 @@
 ユーザーからの入力は、以下のプロセスを経て処理される。
 
 ```
-[ユーザー入力]
-      ↓
-1. **入力解析・エンジン並列実行**
-   - **(v1.1) 非同期並列処理:** 応答性能向上のため、以下のエンジン群を非同期で並列実行する。
-     - SymmetryEngine: 対称性の緊張を検出。
-     - HierarchyEngine: 階層関係を分析。
-     - CausalEngine: 因果関係を分析。
-     - (v1.1) TemporalEngine (拡張機能): 概念の時間的意味変容を追跡。
-     - KnowledgeLinker: 外部知識との関連性を評価。
-     - SubjectivityEngine: ユーザーの主観的価値を評価。
-   - 上記エンジンの出力から「気づきのフラグ」を生成。
-      ↓
-2. **共鳴検知 (概念合成モジュール)**
-   - [cite_start]各「気づきのフラグ」と「重み」に基づき`Resonance_Score`を計算する [cite: 103]。
-      ↓
-3. **コンテキスト生成と圧縮**
-   - エンジン分析結果を統合し、`Resonance_Score`に基づき重要度を判断。
-   - **(v1.1) 情報圧縮:** LLMのトークン制限を考慮し、コンテキスト情報を最適な長さに圧縮・要約する。
-      ↓
-4. **LLMプロンプト構築**
-   - システムプロンプトと、圧縮されたコンテキストを結合し、最終的なプロンプトを作成する。
-      ↓
-5. **LLM推論**
-   - ローカルLLMがプロンプトに基づき、応答テキストを生成する。
-      ↓
-6. **応答整形・出力**
-   - LLMの応答をペルソナに合わせて整形し、ユーザーへ提示する。
-      ↓
-7. **(条件付き) 知識ベース更新**
-   - [cite_start]対話の内容が新たな「了解」や「創造」に繋がった場合、`PhilosophicalConsistencyDaemon`の検証を経て、知識ベースを更新する [cite: 83]。
-```
+ [ユーザー入力]
+          ↓
+    1. **入力解析 (Input Analysis)**
+       - `PatternEngine`: ユーザー入力の基本的な「型」（問い、比較、命令など）を特定する。
+       - `AruisticRetriever`: テキストから主要な`:Concept`ノードを抽出し、知識グラフから関連情報（階層、対称、因果など）を取得する。
+          ↓
+    2. **多角的分析（非同期並列実行） (Multi-faceted Analysis)**
+       - `UserStateModel`: 現在のユーザーの動的状態（セッション時間、ストレスポテンシャル、満足度など）を取得する。
+       - `PsychologicalAxisEngine`: ユーザーの文章スタイルから、認知傾向（思考/感情など）を推定する。
+          ↓
+    3. **共鳴度計算 (Resonance Calculation)**
+       - `ResonanceCalculator`: ステップ1と2で得られた全ての情報（構造、文脈、主観、ユーザー状態）を統合し、対話の「共鳴スコア」を算出する。
+          ↓
+    4. **コンテキスト生成と圧縮 (Context Generation & Compression)**
+       - 全分析結果を、共鳴スコアに基づき、LLMに渡すための、構造化されたコンテキストへと要約・圧縮する。
+          ↓
+    5. **LLMプロンプト構築 (Prompt Construction)**
+       - システムプロンプトと、生成されたコンテキストを結合し、最終的なプロンプトを作成する。
+          ↓
+    6. **LLM推論 (LLM Inference)**
+       - ローカルLLMが、プロンプトに基づき、応答テキストの「草案」を生成する。
+          ↓
+    7. **最終応答調律 (Final Response Tuning by PhilosophersLoop)**
+       - `PhilosophersLoop`: LLMが生成した「草案」を、共鳴スコアとユーザー状態に基づき、最終的な応答（哲学的深度、共感的態度、言葉遣いなど）へと調整・チューニングする。
+          ↓
+    [アリストの応答]
 
-**3. 主要コンポーネント間のAPI定義（案）**
+
+3.  **主要コンポーネント間のAPI定義（更新案）**
 
 * **`(v1.1) async def analyze_input(text: str, user_id: str) -> dict`**
-    * **処理:** データフローのステップ1および2を**非同期並列**で実行。
-    * **出力:** 分析結果を格納した辞書。
-* **`(v1.1) def compress_analysis_for_prompt(analysis_results: dict, max_tokens: int = 500) -> dict`**
-    * **処理:** `Resonance_Score`やフラグの重みに基づいて分析結果の重要度を判断し、規定トークン数を超えないように情報を圧縮・優先順位付けする。
-    * **出力:** 圧縮された分析結果の辞書。
-* **`(v1.1) エラーハンドリング:**
-    * いずれかの分析エンジンでエラーが発生した場合、システムはクラッシュせず、そのエンジンの結果を除外して処理を継続する。エラー情報は詳細にログ記録される。
+ * **`ResonanceCalculator.calculate(analysis_results: dict, user_state: dict) -> dict`**:
+        * **入力:** Retrieverの分析結果と、UserStateModelの状態。
+        * **出力:** `{"score": 0.85, "dominant_factors": ["Subjective_Charge", "Hierarchy_Depth"]}` のような、スコアと主要因を含む辞書。
+    * **`PhilosophersLoop.tune_response(llm_draft: str, resonance_data: dict, user_state: dict) -> str`**:
+        * **入力:** LLMの応答草案、共鳴スコア、ユーザー状態。
+        * **出力:** 最終的にユーザーに提示される、調整済みの応答テキスト。
+
 
 **4. プロンプトテンプレート設計**
 動的コンテキストブロックは、圧縮された分析結果を受け取るように変更。

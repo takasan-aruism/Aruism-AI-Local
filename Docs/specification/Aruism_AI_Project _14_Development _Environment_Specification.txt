@@ -1,71 +1,125 @@
 ######################################################################
 # ドキュメント名: Aruism AI Project - Development Environment Specification
 #                 (アリズムAIプロジェクト - 開発環境仕様書)
+# Docment ID:14
 # プロジェクト: Local Aruism AI Development
-# バージョン: 1.0
-# 最終更新日: 2025-06-20
+# バージョン: 1.1
+# 最終更新日: 2025-06-24
 ######################################################################
 
 1.  **はじめに**
     * 本書は、Aruism AIプロジェクトの開発における、標準的な環境、ツール、フレームワーク、および各種バージョンを定義する。
     * プロジェクト参加者は、開発環境を本書の仕様に準拠させることで、再現性と整合性を確保する。
 
-2.  **統括部長（開発者）のローカル環境**
-    * 本セクションは、統括部長の現在の開発マシン環境を記録する。
+######################################################################
+# ドキュメント名: Aruism AI Project - Development Environment Specification
+#                 (アリズムAIプロジェクト - 開発環境仕様書)
+# プロジェクト: Local Aruism AI Development
+# バージョン: 1.1 (最新化版)
+# 最終更新日: 2025-06-24
+######################################################################
 
-    * **OS:**
-        * macOS (バージョン： Sonoma 以降を推奨)
+1.  **はじめに**
+    * 本書は、Aruism AIプロジェクトの開発における、標準的な環境、ツール、フレームワークを定義する。
+    * プロジェクト参加者は、開発環境を本書の仕様に準拠させることで、再現性と整合性を確保する。
 
-    * **Python環境:**
-        * `venv` や `conda` 等の仮想環境利用を強く推奨。
-        * プロジェクトルートで `python -m venv venv` のように仮想環境を作成し、`source venv/bin/activate` で有効化する。
+2.  **プロジェクトワイド標準**
+    * プロジェクト全体で標準として使用する技術と規約を規定する。
 
-    * **Neo4jデータベース:**
-        * **接続URI:** `bolt://localhost:7687` (標準設定)
-        * **ユーザー名:** `neo4j` (標準設定)
-        * **パスワード:** (設定したパスワード)
-        * **データディレクトリパス (macOSの例):**
-            * `※要確認：実際のパスに修正してください`
-            * `/Users/takahirourakami/Library/Application Support/Neo4j Desktop/Application/relate-data/dbmss/dbms-[ランダムなID]`
-
-3.  **主要な技術スタックとフレームワーク**
-    * プロジェクト全体で標準として使用する技術と、そのバージョンを規定する。
-
-    * **プログラミング言語:**
+    * **2.1. プログラミング言語:**
         * **Python:** `3.12.x`
 
-    * **データベース:**
+    * **2.2. データベース:**
         * **Neo4j:** `5.x` (最新安定版)
 
-    * **LLM推論エンジン:**
-        * **vLLM:** (最新安定版)
-        * **備考:** 高いパフォーマンスと開発上の柔軟性を両立するため、「DeepResearch」の提言に基づき採用を決定。
+    * **2.3. Python環境管理:**
+        * **仮想環境:** `conda` または `venv` の利用を強く推奨。
+        * **パッケージ管理:** プロジェクトのルートディレクトリに配置された **`requirements.txt`** を、唯一の信頼できる情報源とする。新しい環境では `pip install -r requirements.txt` を実行することで、全ての依存ライブラリがインストールされる。
+        * **パス管理:** プロジェクトのルートディレクトリに配置された **`pyproject.toml`** によって、ソースコードのパス（`src`ディレクトリ）が管理される。これにより、プロジェクト内の全てのインポートは `from aruism_ai...` という形式で統一される。
 
-    * **主要Pythonライブラリ:**
-        * `neo4j` (最新安定版): Neo4jデータベースとの接続用ドライバ。
-        * `pytest` (最新安定版): ユニットテストの実行フレームワーク。
-        * `uvicorn` (最新安定版): vLLMのAPIサーバー等で使用。
-        * `fastapi` (最新安定版): vLLMのAPIインターフェース等で使用。
-        * `transformers` (最新安定版): トークナイザー等、vLLMが依存するHugging Faceエコシステムのコアライブラリ。
-        * `pyautogui` (最新安定版): フェーズ4で実績のある、ブラウザ等のGUI操作自動化ライブラリ。
-        * `python-dotenv` (最新安定版): `.env`ファイルから環境変数を読み込むために使用。
+    * **2.4. バージョン管理とCI/CD:**
+        * **バージョン管理:** **Git** / **GitHub**
+        * **CI/CD:** **GitHub Actions** (`.github/workflows/python-ci.yml` にて定義)
 
-4.  **開発・協業ツール**
+    * **2.5. ソースコードのディレクトリ構造:**
+        * 全ての主要なPythonソースコードは、 **`src/aruism_ai/`** ディレクトリ以下に、機能ごとにパッケージ化されて格納される。
 
-    * **バージョン管理:**
-        * **Git:** (最新安定版)
-        * **リポジトリ:** **GitHub**
+3.  **開発者セットアップ・ノート**
+    * 本セクションは、開発者がローカル環境を構築する際の参考情報である。
 
-    * **CI/CD (継続的インテグレーション/継続的デプロイメント):**
-        * **GitHub Actions**
-        * **備考:** コードプッシュ時に、ユニットテストや「アリズム適性検査」を自動実行する。
+    * **OS:** macOS (Sonoma 以降を推奨)
+    * **Neo4j接続情報 (ローカル):**
+        * **接続URI:** `bolt://localhost:7687`
+        * **ユーザー名:** `neo4j`
+        * **パスワード:** (各自で設定したパスワード)
 
-    * **協力AIチーム:**
-        * **統括補佐AI:** Gemini
-        * **実装協力AI-A:** アーキテクト (Graph-RAG, プロンプト担当)
-        * **実装協力AI-B:** オプティマイザー (vLLM, パフォーマンス担当)
-        * **実装協力AI-C:** フィロソファー (倫理、哲学整合性担当)
+4.  **【付録】現在のディレクトリ構造 (主要ファイル)**
+    * 本プロジェクトの現在の主要なファイル・ディレクトリ構造は以下の通りである。
 
+    ```
+    .
+    ├── .github/
+    │   └── workflows/
+    │       └── python-ci.yml
+    ├── config/
+    ├── data/
+    │   ├── AruismBaseDBTable.csv
+    │   ├── kyoto-univ-web-ncf-0.5.xml.gz
+    │   ├── SentiWordNet_3.0.0.txt
+    │   └── wnjpn.db
+    ├── Docs/
+    ├── pyproject.toml
+    ├── requirements.txt
+    ├── scripts/
+    │   └── curate_knowledge.py
+    ├── src/
+    │   └── aruism_ai/
+    │       ├── __init__.py
+    │       ├── bootstrapping/
+    │       │   ├── genesis_importer.py
+    │       │   ├── wordnet_importer.py
+    │       │   ├── sentiwordnet_importer.py
+    │       │   └── caseframe_importer.py
+    │       ├── integrity/
+    │       │   ├── daemon.py
+    │       │   └── philosophers_loop.py
+    │       ├── ontology/
+    │       │   ├── db_manager.py
+    │       │   └── models.py
+    │       ├── reasoning/
+    │       │   ├── causal_engine.py
+    │       │   ├── hierarchy_engine.py
+    │       │   ├── symmetry_engine.py
+    │       │   ├── pattern_engine.py
+    │       │   └── user_state_model.py
+    │       └── retrieval/
+    │           └── retriever.py
+├── test_mecab.py
+├── tests
+│   ├── __init__.py
+│   ├── bootstrapping
+│   │   ├── test_caseframe_importer.py
+│   │   ├── test_genesis_importer.py
+│   │   ├── test_sentiwordnet_importer.py
+│   │   └── test_wordnet_importer.py
+│   ├── integrity
+│   │   ├── test_daemon.py
+│   │   └── test_philosophers_loop.py
+│   ├── ontology
+│   │   └── test_db_manager.py
+│   ├── reasoning
+│   │   ├── test_causal_engine.py
+│   │   ├── test_hierarchy_engine.py
+│   │   ├── test_pattern_engine.py
+│   │   ├── test_symmetry_engine.py
+│   │   └── test_user_state_model.py
+│   └── retrieval
+│       └── test_retriever.py
+    ```
+
+######################################################################
+# 本書の終わり
+######################################################################
 5.  ディレクトリ階層情報
 
 aruism_AI_Project
