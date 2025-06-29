@@ -310,38 +310,59 @@ def add_efficient_methods_to_db_manager(db_manager_class):
     db_manager_class.batch_create_relationships = batch_create_relationships
 
 if __name__ == '__main__':
-    logging.basicConfig(
-        level=logging.INFO, 
-        format='%(asctime)s - %(levelname)s - %(message)s'
-    )
-    
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     db_manager = None
-    importer = None
-    
     try:
         PROJECT_ROOT = find_project_root()
-        SQLITE_DB_PATH = os.path.join(PROJECT_ROOT, "data", "wnjpn.db")
+        
+        # CSVファイルのパスを設定
+        # まず一般的な名前で試す
+        possible_csv_names = [
+            "AruismBaseDBTable_Genesis.csv",
+            "AruismBaseDBTable.csv", 
+            "genesis_data.csv",
+            "genesis.csv"
+        ]
+        
+        CSV_PATH = None
+        for csv_name in possible_csv_names:
+            test_path = os.path.join(PROJECT_ROOT, "data", csv_name)
+            if os.path.exists(test_path):
+                CSV_PATH = test_path
+                print(f"CSVファイルを発見: {CSV_PATH}")
+                break
+        
+        if not CSV_PATH:
+            print("エラー: 以下のファイルのいずれも見つかりませんでした:")
+            for csv_name in possible_csv_names:
+                test_path = os.path.join(PROJECT_ROOT, "data", csv_name)
+                print(f"  - {test_path}")
+            print("\ndataディレクトリの内容:")
+            data_dir = os.path.join(PROJECT_ROOT, "data")
+            if os.path.exists(data_dir):
+                for file in os.listdir(data_dir):
+                    print(f"  - {file}")
+            else:
+                print("  dataディレクトリが存在しません")
+            exit(1)
+
+        # Neo4j接続設定
         NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
         NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
         NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD")
 
         if not NEO4J_PASSWORD:
-            raise ValueError("環境変数 NEO4J_PASSWORD が設定されていません。")
+            raise ValueError("環境変数 NEO4J_PASSWORD が設定されていません。ターミナルで 'export NEO4J_PASSWORD=\"あなたのパスワード\"' を実行してください。")
 
-        # DBManagerのインスタンス化
         db_manager = GraphDBManager(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
         
-        # 効率的なメソッドを追加
-        add_efficient_methods_to_db_manager(GraphDBManager)
-        
-        # インポーターの作成と実行
-        importer = WordNetStreamingImporter(SQLITE_DB_PATH, db_manager)
-        importer.run_streaming_enrichment()
+        if db_manager.driver:
+            importer = GenesisImporter(db_manager)
+            importer.run_import(CSV_PATH)
 
     except Exception as e:
         logging.error(f"メイン処理でエラーが発生しました: {e}", exc_info=True)
     finally:
-        if importer:
-            importer.close()
         if db_manager:
             db_manager.close()
+            print("データベース接続を閉じました。")

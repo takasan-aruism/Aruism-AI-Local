@@ -13,4 +13,5 @@ venv/
 data/
 
 # APIキーやパスワードなど、絶対に公開してはいけない設定ファイル
-.env
+.envsrc/aruism_ai.egg-info/
+src/aruism_ai.egg-info/

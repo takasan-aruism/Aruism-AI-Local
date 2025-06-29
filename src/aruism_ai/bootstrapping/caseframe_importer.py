@@ -104,29 +104,27 @@ if __name__ == '__main__':
         if db_manager:
             db_manager.close()
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     db_manager = None
     try:
         PROJECT_ROOT = find_project_root()
         CASEFRAME_PATH = os.path.join(PROJECT_ROOT, "data", "kyoto-univ-web-ncf-0.5.xml.gz")
         
-        if not os.path.exists(CASEFRAME_PATH):
-            unzipped_path = CASEFRAME_PATH.replace(".gz", "")
-            if os.path.exists(unzipped_path):
-                CASEFRAME_PATH = unzipped_path
-            else:
-                raise FileNotFoundError(f"格フレームファイルが見つかりません: {CASEFRAME_PATH}")
+        NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
+        NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
+        NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD")
 
-        NEO4J_URI = "bolt://localhost:7687"
-        NEO4J_USER = "neo4j"
-        NEO4J_PASSWORD = "11dr34SSAAa_$$aae"
+        if not NEO4J_PASSWORD:
+            raise ValueError("環境変数 NEO4J_PASSWORD が設定されていません。")
 
         db_manager = GraphDBManager(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
+
         if db_manager.driver:
             importer = CaseFrameImporter(db_manager)
             importer.run_import(CASEFRAME_PATH)
 
     except Exception as e:
-        print(f"メイン処理でエラーが発生しました: {e}")
+        logging.error(f"メイン処理でエラーが発生しました: {e}", exc_info=True)
     finally:
         if db_manager:
             db_manager.close()

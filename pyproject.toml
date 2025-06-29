@@ -1,13 +1,19 @@
-[tool.pytest.ini_options]
-pythonpath = [
-    "src"
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aruism_ai"
+version = "0.1.0"
+authors = [
+  { name="Taka-Aruism", email="author@example.com" },
 ]
-testpaths = [
-    "tests",
+description = "Aruism AI Project"
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
 ]
 
-[tool.setuptools]
-packages = ["aruism_ai"]
-
-[tool.setuptools.package-dir]
-aruism_ai = "src/aruism_ai"
+[tool.setuptools.packages.find]
+where = ["src"]
