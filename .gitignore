@@ -15,3 +15,5 @@ data/
 # APIキーやパスワードなど、絶対に公開してはいけない設定ファイル
 .envsrc/aruism_ai.egg-info/
 src/aruism_ai.egg-info/
+workspace/
+.env
