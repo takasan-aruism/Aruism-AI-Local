@@ -1,23 +1,17 @@
-######################################################################
-# Aruism AI Project - Genesis Importer
-# バージョン: 1.3 (実際のインポート実行版)
-######################################################################
+# /workspace/Aruism-AI-Local/src/aruism_ai/bootstrapping/genesis_importer.py
+
 import os
 import csv
 from tqdm import tqdm
 import logging
+import sys
+
+# プロジェクトルートをパスに追加
+PROJECT_ROOT = "/workspace/Aruism-AI-Local"
+sys.path.append(os.path.join(PROJECT_ROOT, "src"))
+
 from aruism_ai.ontology.db_manager import GraphDBManager
 from aruism_ai.ontology.models import Concept, Relationship
-
-def find_project_root(marker_file='pyproject.toml'):
-    current_path = os.path.abspath(__file__)
-    while True:
-        parent_path = os.path.dirname(current_path)
-        if os.path.exists(os.path.join(parent_path, marker_file)):
-            return parent_path
-        if parent_path == current_path:
-            raise FileNotFoundError(f"Project root with '{marker_file}' not found.")
-        current_path = parent_path
 
 class GenesisImporter:
     def __init__(self, db_manager: GraphDBManager):
@@ -79,13 +73,21 @@ class GenesisImporter:
             print("\n--- パス1: 全ての概念ノードを作成します ---")
             concepts = []
             for row in tqdm(data, desc="ノード準備中"):
+                # CSVのカラム名に合わせて調整（axis_kanjiを使用）
                 node = Concept(
                     concept_id=row['concept_id'],
-                    symbol=row['symbol'],
-                    canonical_name_ja=row['axis_kanji'],
-                    category=row['category'],
+                    symbol=row.get('symbol', ''),
+                    canonical_name_ja=row.get('axis_kanji', row.get('kanji_axis', '')),
+                    category=row.get('category', ''),
                     source_of_data=['AruismBaseDBTable_Genesis']
                 )
+                
+                # 追加属性（run_hierarchy_generation.pyで使用）
+                if 'english_word' in row:
+                    node.english_word = row['english_word']
+                if 'kanji_axis' in row:
+                    node.kanji_axis = row['kanji_axis']
+                    
                 concepts.append(node)
                 if len(concepts) >= self.batch_size:
                     self.create_concepts_in_batch(concepts)
@@ -110,20 +112,23 @@ class GenesisImporter:
             if relationships:
                 self.create_relationships_in_batch(relationships)
             
+            # 最終確認
+            result = self.db_manager.execute_query("MATCH (c:Concept) RETURN COUNT(c) as count")
+            print(f"\n✓ 作成されたコンセプト数: {result[0]['count']}")
+            
+            result = self.db_manager.execute_query("MATCH ()-[r:Symmetric_To]->() RETURN COUNT(r) as count")
+            print(f"✓ 作成された対称関係数: {result[0]['count']}")
+            
             print("\n--- 原初の概念のインポートが完了しました ---")
-        except FileNotFoundError:
-            logging.error(f"ファイルが見つかりません: {filepath}")
+            
         except Exception as e:
             logging.error(f"予期せぬエラーが発生しました: {e}", exc_info=True)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    db_manager = None
+    
     try:
-        PROJECT_ROOT = find_project_root()
-        
         # CSVファイルのパスを設定
-        # まず一般的な名前で試す
         possible_csv_names = [
             "AruismBaseDBTable_Genesis.csv",
             "AruismBaseDBTable.csv", 
@@ -132,44 +137,42 @@ if __name__ == '__main__':
         ]
         
         CSV_PATH = None
+        data_dir = os.path.join(PROJECT_ROOT, "data")
+        
         for csv_name in possible_csv_names:
-            test_path = os.path.join(PROJECT_ROOT, "data", csv_name)
+            test_path = os.path.join(data_dir, csv_name)
             if os.path.exists(test_path):
                 CSV_PATH = test_path
                 print(f"CSVファイルを発見: {CSV_PATH}")
                 break
         
         if not CSV_PATH:
-            print("エラー: 以下のファイルのいずれも見つかりませんでした:")
-            for csv_name in possible_csv_names:
-                test_path = os.path.join(PROJECT_ROOT, "data", csv_name)
-                print(f"  - {test_path}")
+            print("エラー: CSVファイルが見つかりませんでした。")
             print("\ndataディレクトリの内容:")
-            data_dir = os.path.join(PROJECT_ROOT, "data")
             if os.path.exists(data_dir):
                 for file in os.listdir(data_dir):
-                    print(f"  - {file}")
-            else:
-                print("  dataディレクトリが存在しません")
+                    if file.endswith('.csv'):
+                        print(f"  - {file}")
             exit(1)
 
-        # Neo4j接続設定
-        NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
-        NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
-        NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD")
+        # Docker環境用のNeo4j接続設定
+        NEO4J_URI = "bolt://arism-db:7687"  # Docker内部ネットワーク
+        NEO4J_USER = "neo4j"
+        NEO4J_PASSWORD = "password"  # Docker環境のパスワード
 
-        if not NEO4J_PASSWORD:
-            raise ValueError("環境変数 NEO4J_PASSWORD が設定されていません。ターミナルで 'export NEO4J_PASSWORD=\"あなたのパスワード\"' を実行してください。")
-
+        print(f"Neo4jに接続中: {NEO4J_URI}")
         db_manager = GraphDBManager(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
         
         if db_manager.driver:
+            print("✓ データベース接続成功")
             importer = GenesisImporter(db_manager)
             importer.run_import(CSV_PATH)
+        else:
+            print("✗ データベース接続失敗")
 
     except Exception as e:
         logging.error(f"メイン処理でエラーが発生しました: {e}", exc_info=True)
     finally:
-        if db_manager:
+        if 'db_manager' in locals() and db_manager:
             db_manager.close()
             print("データベース接続を閉じました。")

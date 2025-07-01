@@ -1,21 +1,2 @@
-# ======================================================================
-# Aruism AI Project - Python Module Requirements
-# 最終更新日: 2025-06-22 (CI/CD対応版)
-# ======================================================================
-
-# --- LLM推論エンジンとWebサーバー (Phase 5) ---
-vllm
-uvicorn
-fastapi
-transformers
-jinja2
-
-# --- データベース接続 (Core) ---
-neo4j
-
-# --- 自然言語処理 (NLP) ---
-janome  # [追加] SymmetryEngineが使用する形態素解析器
-
-# --- 開発・テストツール (Dev/Test) ---
-pytest
-python-dotenv
+requests>=2.31.0
+neo4j>=5.0.0

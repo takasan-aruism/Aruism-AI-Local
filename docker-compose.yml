@@ -1,41 +1,33 @@
+version: '3.9'
 services:
-  arism-db:
+  aristo-db:
     image: neo4j:5
-    container_name: arism-db
+    container_name: aris-db
     ports:
       - "7474:7474"
       - "7687:7687"
     environment:
       - NEO4J_AUTH=neo4j/password
 
-# docker-compose.yml
-
-# ... (version, services, arism-db の定義は変更なし) ...
-
-# docker-compose.yml (aristo-engine部分)
-
   aristo-engine:
-    # 以前ビルドに成功した、実績のあるイメージを使用
-    image: nvidia/cuda:12.5.1-devel-ubuntu22.04
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
     container_name: aristo-engine
-    # 思考エンジンをサーバーモードで起動するための、最終的なコマンド
-    command:
-      - "/workspace/llama.cpp/build/bin/llama-server"
-      - "-m"
-      - "/workspace/llama.cpp/models/Llama-4-Scout-Q8-merged.gguf"
-      - "-c"
-      - "8192"
-      - "-ngl"
-      - "24"  # 最初の24レイヤーをGPU 0に
-      - "-ngl"
-      - "24"  # 次の24レイヤーをGPU 1に (合計48レイヤー)
-      - "--host"
-      - "0.0.0.0"
-      - "--port"
-      - "8080"
+    environment:
+      - LLAMA_ARG_MODEL=/models/Llama-4-Scout-Q8-merged.gguf
+      - LLAMA_ARG_CTX_SIZE=4096
+      - LLAMA_ARG_N_GPU_LAYERS=25
+      - LLAMA_ARG_HOST=0.0.0.0
+      - LLAMA_ARG_PORT=8080
+      - LLAMA_ARG_N_THREADS=24
+      - LLAMA_ARG_TENSOR_SPLIT=1,1
+      - LLAMA_ARG_BATCH=2048
+      - LLAMA_ARG_UBATCH=1024
+
+      - GGML_CUDA_NO_PINNED=1
+    volumes:
+      - ./workspace/llama.cpp/models:/models
     ports:
       - "8080:8080"
-    # マルチGPU通信と安定稼働に必須のオプション
     deploy:
       resources:
         reservations:
@@ -43,21 +35,14 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-    ipc: host
-    ulimits:
-      memlock: -1
-      stack: 67108864
-    # ビルド済みのエンジンと、ダウンロード済みのモデルを永続化
-    volumes:
-      - ./workspace:/workspace
-  # ... (arism-app, volumes の定義は変更なし) ...
-  arism-app:
+
+  aristo-app:
     image: python:3.10
-    container_name: arism-app
+    container_name: aristo-app
     command: bash -c "pip install neo4j && tail -f /dev/null"
     volumes:
       - .:/workspace/Aruism-AI-Local
     environment:
-      - NEO4J_URI=bolt://arism-db:7687
+      - NEO4J_URI=bolt://aristo-db:7687
       - NEO4J_USER=neo4j
       - NEO4J_PASSWORD=password
