@@ -1,16 +1,23 @@
-# Dockerfile.engine
-FROM nvidia/cuda:12.5.1-devel-ubuntu22.04
+# Dockerfile.engine (最終確定版 v6：ランタイムライブラリ包括コピー版)
 
+# --- ステージ1: ビルダー ---
+FROM nvidia/cuda:12.5.1-devel-ubuntu22.04 AS builder
 WORKDIR /workspace
+RUN apt-get update && apt-get install -y git build-essential cmake libcurl4-openssl-dev
+ENV LD_LIBRARY_PATH /usr/local/nvidia/lib64:${LD_LIBRARY_PATH}
+RUN git clone https://github.com/ggerganov/llama.cpp.git
+WORKDIR /workspace/llama.cpp
+RUN cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON -DLLAMA_BUILD_TESTS=OFF && \
+    cmake --build build --config Release --target llama-server -j 2
 
-# llama.cppのビルドに必要なツールをインストール
-RUN apt-get update && apt-get install -y git build-essential cmake
+# --- ステージ2: 最終実行環境 ---
+FROM nvidia/cuda:12.5.1-runtime-ubuntu22.04
+WORKDIR /app
 
-# ソースコードをクローンしてビルド
-RUN git clone https://github.com/ggerganov/llama.cpp.git && \
-    cd llama.cpp && \
-    cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON && \
-    cmake --build build --config Release
+# 【最重要修正点】実行ファイルと、考えうる全ての共有ライブラリを包括的にコピー
+COPY --from=builder /workspace/llama.cpp/build/bin/* ./
+COPY --from=builder /workspace/llama.cpp/build/lib* ./
+COPY --from=builder /workspace/llama.cpp/build/ggml/src/*.so* ./
 
 # サーバーを起動
-CMD ["/workspace/llama.cpp/build/bin/llama-server", "-m", "/models/Llama-4-Scout-Q8-merged.gguf", "-c", "8192", "-ngl", "99", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["./llama-server", "-m", "/models/Llama-4-Scout-Q8-merged.gguf", "-c", "8192", "-ngl", "99", "--host", "0.0.0.0", "--port", "8080"]

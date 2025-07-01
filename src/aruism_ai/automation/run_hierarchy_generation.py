@@ -1,0 +1,226 @@
+# src/aruism_ai/automation/run_hierarchy_generation.py
+
+import os
+import sys
+import json
+import subprocess
+import argparse
+import logging
+import tempfile
+import re
+
+# プロジェクトルートをパスに追加
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from aruism_ai.ontology.db_manager import GraphDBManager
+
+# --- 設定項目 ---
+LLAMA_CPP_DIR = "/workspace/llama.cpp"
+LLAMA_CLI_PATH = os.path.join(LLAMA_CPP_DIR, "build/bin", "llama-cli")  # 修正: llama-cli
+MODEL_PATH = os.path.join(LLAMA_CPP_DIR, "models/Llama-4-Scout-Q8-merged.gguf")
+DRAFT_DIR = "/workspace/Aruism-AI-Local/data/drafts"
+UPDATER_SCRIPT_PATH = "/workspace/Aruism-AI-Local/src/aruism_ai/bootstrapping/hierarchy_updater.py"
+
+def check_environment():
+    """実行環境をチェック"""
+    if not os.path.exists(LLAMA_CLI_PATH):
+        raise FileNotFoundError(f"llama-cli が見つかりません: {LLAMA_CLI_PATH}")
+    
+    if not os.path.exists(MODEL_PATH):
+        raise FileNotFoundError(f"モデルファイルが見つかりません: {MODEL_PATH}")
+    
+    print("環境チェック: OK")
+
+class GenerationOrchestrator:
+    """
+    コンセプトIDに基づき、階層生成からDB更新までの一連のプロセスを統括する。
+    """
+    def __init__(self, db_manager: GraphDBManager):
+        self.db_manager = db_manager
+        check_environment()
+
+    def _get_concept_pair_info(self, concept_id: str):
+        """指定されたIDのコンセプトと、その対称コンセプトの情報をDBから取得する。"""
+        query = """
+        MATCH (c1:Concept {concept_id: $concept_id})
+        OPTIONAL MATCH (c1)-[:Symmetric_To]-(c2:Concept)
+        RETURN c1.kanji_axis AS axis1, c1.english_word AS word1,
+               c2.concept_id AS id2, c2.kanji_axis AS axis2, c2.english_word AS word2
+        """
+        result = self.db_manager.execute_query(query, concept_id=concept_id)
+        if not result:
+            raise ValueError(f"コンセプトID '{concept_id}' がデータベースに見つかりません。")
+        return result[0]
+
+    def _generate_prompt(self, pair_info: dict):
+        """Llama 4に渡すための、対称ペア分析用のプロンプトを生成する。"""
+        if pair_info.get("id2"):
+            prompt_text = f"""
+# Task: Generate and Compare Meaning Hierarchies for a Symmetric Pair
+## Input:
+{{
+  "axis_1": {{ "kanji": "{pair_info['axis1']}", "english": "{pair_info['word1']}" }},
+  "axis_2": {{ "kanji": "{pair_info['axis2']}", "english": "{pair_info['word2']}" }}
+}}
+## Output:
+Please generate a JSON structure with hierarchies for both axes."""
+        else:
+            prompt_text = f"""
+# Task: Generate Meaning Hierarchy for a Kanji Axis
+## Input:
+{{ "kanji_axis": "{pair_info['axis1']}" }}
+## Output:
+Please generate a JSON structure with the hierarchy."""
+        return prompt_text
+
+    def _run_llama_cli(self, prompt: str):
+        """llama-cliをサブプロセスとして実行し、出力をキャプチャする。"""
+        # プロンプトを一時ファイルに保存
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
+            f.write(prompt)
+            prompt_file = f.name
+        
+        try:
+            command = [
+                LLAMA_CLI_PATH,
+                "-m", MODEL_PATH,
+                "-f", prompt_file,  # ファイルから読み込み
+                "-n", "1024",
+                "--temp", "0.7",
+                "--n-gpu-layers", "-1",  # GPU使用
+                "--no-display-prompt"    # プロンプトを出力に含めない
+            ]
+            
+            # 環境変数を設定
+            env = os.environ.copy()
+            env['LANG'] = 'ja_JP.UTF-8'
+            env['LC_ALL'] = 'ja_JP.UTF-8'
+            
+            logging.info(f"llama-cliを実行します: {' '.join(command)}")
+            result = subprocess.run(
+                command, 
+                capture_output=True, 
+                text=True,
+                env=env,
+                encoding='utf-8'
+            )
+            
+            if result.returncode != 0:
+                raise RuntimeError(f"llama-cliの実行に失敗しました:\n{result.stderr}")
+            
+            return self._extract_json_from_output(result.stdout)
+            
+        finally:
+            os.unlink(prompt_file)
+
+    def _extract_json_from_output(self, output: str):
+        """AIの出力からJSONを抽出する（堅牢版）"""
+        # Markdownコードブロック内のJSONを探す
+        code_block_match = re.search(r'```json\n(.*?)\n```', output, re.DOTALL)
+        if code_block_match:
+            try:
+                return json.loads(code_block_match.group(1))
+            except json.JSONDecodeError:
+                pass
+        
+        # 通常のJSONパターンを探す
+        json_patterns = [
+            r'\{[^{}]*\{[^{}]*\}[^{}]*\}',  # ネストしたJSON
+            r'\{[^}]+\}',  # シンプルなJSON
+        ]
+        
+        for pattern in json_patterns:
+            matches = re.findall(pattern, output, re.DOTALL)
+            for match in matches:
+                try:
+                    return json.loads(match)
+                except json.JSONDecodeError:
+                    continue
+        
+        raise ValueError(f"有効なJSONが見つかりませんでした:\n{output}")
+
+    def execute_workflow(self, start_concept_id: str, auto_approve: bool = False): # auto_approve引数を追加
+        """自動化ワークフロー全体を実行する。"""
+        try:
+            # 1. DBからコンセプト情報を取得
+            pair_info = self._get_concept_pair_info(start_concept_id)
+            
+            # 2. プロンプトを生成
+            prompt = self._generate_prompt(pair_info)
+            logging.info("プロンプトを生成しました。")
+
+            # 3. Llama 4を実行して草案を生成
+            logging.info("Llama 4に階層構造の起草を依頼します...")
+            draft_data = self._run_llama_cli(prompt)
+            
+            # 4. 草案をファイルに保存
+            os.makedirs(DRAFT_DIR, exist_ok=True)
+            draft_file_path = os.path.join(DRAFT_DIR, f"{start_concept_id}_draft.json")
+            with open(draft_file_path, 'w', encoding='utf-8') as f:
+                json.dump(draft_data, f, ensure_ascii=False, indent=2)
+            
+            print("\n" + "="*50)
+            print("AIによる階層構造の草案が生成されました。")
+            print(f"ファイルパス: {draft_file_path}")
+            print("="*50)
+            print(json.dumps(draft_data, ensure_ascii=False, indent=2))
+            print("="*50)
+
+            # 5. 創設者による承認
+            if not auto_approve:
+                approval = input("この内容でデータベースを更新しますか？ (y/n): ").lower()
+            else:
+                approval = 'y' # 自動承認モードの場合は 'y' とする
+                print("自動承認モードにより、データベース更新を承認します。")
+
+            # 6. 承認されれば、DB更新スクリプトを実行
+            if approval == 'y':
+                logging.info("承認されました。データベースを更新します。")
+                
+                # '愛'の更新
+                subprocess.run([
+                    "python3", UPDATER_SCRIPT_PATH,
+                    start_concept_id, draft_file_path, pair_info['axis1']
+                ], check=True)
+                
+                # 対称ペアがあれば、それも更新
+                if pair_info.get("id2"):
+                    subprocess.run([
+                        "python3", UPDATER_SCRIPT_PATH,
+                        pair_info['id2'], draft_file_path, pair_info['axis2']
+                    ], check=True)
+
+                print("データベースの更新が完了しました。")
+            else:
+                print("処理は中断されました。データベースは更新されていません。")
+
+        except Exception as e:
+            logging.error(f"ワークフロー実行中にエラーが発生しました: {e}", exc_info=True)
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+    
+    parser = argparse.ArgumentParser(description="アリストAIの知識階層を半自動で生成・更新します。")
+    parser.add_argument("start_concept_id", type=str, help="起点となるコンセプトのID (例: M0001)")
+    parser.add_argument("--auto-approve", action="store_true", help="承認プロセスをスキップし、自動的に更新を実行します。")
+    args = parser.parse_args()
+
+    # DBManagerの初期化
+    try:
+        # Neo4j接続情報（環境に合わせて修正）
+        db_manager = GraphDBManager(
+        uri=os.environ.get("NEO4J_URI", "bolt://localhost:7687"),
+            user="neo4j",
+            password="password"  # 実際のパスワードに変更
+        )
+        
+        if db_manager.driver:
+            orchestrator = GenerationOrchestrator(db_manager)
+            orchestrator.execute_workflow(args.start_concept_id, args.auto_approve)
+        else:
+            print("データベース接続に失敗しました")
+            
+    except Exception as e:
+        logging.error(f"実行エラー: {e}")
+        print("注：Neo4jデータベースへの接続が必要です。")
+        print("テスト実行の場合は、モックDBManagerを使用してください。")
