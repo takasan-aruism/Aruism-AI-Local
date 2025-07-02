@@ -1,0 +1,168 @@
+aristo-engine-q6  | load_tensors:        CUDA0 model buffer size = 25831.05 MiB
+aristo-engine-q6  | load_tensors:        CUDA1 model buffer size = 26011.05 MiB
+aristo-engine-q6  | load_tensors:   CPU_Mapped model buffer size = 32795.86 MiB
+
+孫子の兵法書についていくつか教えて
+
+aristo-engine-q6  | prompt eval time =     296.35 ms /    20 tokens (   14.82 ms per token,    67.49 tokens per second)
+aristo-engine-q6  |        eval time =   14438.90 ms /   273 tokens (   52.89 ms per token,    18.91 tokens per second)
+aristo-engine-q6  |       total time =   14735.25 ms /   293 tokens
+aristo-engine-q6  | srv  update_slots: all slots are idle
+
+日本国憲法第一条の詳細を教えて
+aristo-engine-q6  | prompt eval time =     297.13 ms /    20 tokens (   14.86 ms per token,    67.31 tokens per second)
+aristo-engine-q6  |        eval time =   20736.90 ms /   315 tokens (   65.83 ms per token,    15.19 tokens per second)
+aristo-engine-q6  |       total time =   21034.03 ms /   335 tokens
+
+aristo-engine-q6  | prompt eval time =     337.75 ms /    25 tokens (   13.51 ms per token,    74.02 tokens per second)
+aristo-engine-q6  |        eval time =   25712.90 ms /   474 tokens (   54.25 ms per token,    18.43 tokens per second)
+aristo-engine-q6  |       total time =   26050.65 ms /   499 tokens
+
+
+
+aristo-engine-q6  | load_tensors:        CUDA0 model buffer size = 25831.05 MiB
+aristo-engine-q6  | load_tensors:        CUDA1 model buffer size = 26011.05 MiB
+aristo-engine-q6  | load_tensors:   CPU_Mapped model buffer size = 32795.86 MiB
+      - LLAMA_ARG_N_GPU_LAYERS=30  # Q6用に調整
+      - LLAMA_ARG_PORT=8081  # ポートを変更
+      - LLAMA_ARG_N_THREADS=24
+      - LLAMA_ARG_BATCH=512
+      - LLAMA_ARG_UBATCH=256
+      - GGML_CUDA_NO_PINNED=1
+      - LLAMA_ARG_TENSOR_SPLIT=1,1
+      - LLAMA_ARG_OVERRIDE_KV="llama.attention.layer_norm_rms_epsilon=float:0.00001"
+      - LLAMA_ARG_TENSOR_OFFLOAD=".*ffn.*"  # FFN層をCPUに
+      
+aristo-engine-q6  | prompt eval time =   22314.72 ms /  1266 tokens (   17.63 ms per token,    56.73 tokens per second)
+aristo-engine-q6  |        eval time =   34890.30 ms /   559 tokens (   62.42 ms per token,    16.02 tokens per second)
+aristo-engine-q6  |       total time =   57205.02 ms /  1825 tokens
+
+aristo-engine-q6  | prompt eval time =    1547.88 ms /   242 tokens (    6.40 ms per token,   156.34 tokens per second)
+aristo-engine-q6  |        eval time =   26788.92 ms /   477 tokens (   56.16 ms per token,    17.81 tokens per second)
+aristo-engine-q6  |       total time =   28336.80 ms /   719 tokens
+
+aristo-engine-q6  | load_tensors:        CUDA0 model buffer size = 25831.05 MiB
+aristo-engine-q6  | load_tensors:        CUDA1 model buffer size = 26011.05 MiB
+aristo-engine-q6  | load_tensors:   CPU_Mapped model buffer size = 32795.86 MiB
+
+- LLAMA_ARG_N_GPU_LAYERS=30  # Q6用に調整
+      - LLAMA_ARG_PORT=8081  # ポートを変更
+      - LLAMA_ARG_N_THREADS=24
+      - LLAMA_ARG_BATCH=512
+      - LLAMA_ARG_UBATCH=256
+      - GGML_CUDA_NO_PINNED=1
+      - LLAMA_ARG_TENSOR_SPLIT=1,1
+aristo-engine-q6  | load_tensors:        CUDA0 model buffer size = 27583.13 MiB
+aristo-engine-q6  | load_tensors:        CUDA1 model buffer size = 26011.05 MiB
+aristo-engine-q6  | load_tensors:   CPU_Mapped model buffer size = 31043.79 MiB
+
+aristo-engine-q6  | prompt eval time =   29180.95 ms /  2336 tokens (   12.49 ms per token,    80.05 tokens per second)
+aristo-engine-q6  |        eval time =   39861.01 ms /   647 tokens (   61.61 ms per token,    16.23 tokens per second)
+aristo-engine-q6  |       total time =   69041.96 ms /  2983 tokens
+
+aristo-engine-q6  | prompt eval time =     327.06 ms /    18 tokens (   18.17 ms per token,    55.04 tokens per second)
+aristo-engine-q6  |        eval time =    5147.11 ms /    92 tokens (   55.95 ms per token,    17.87 tokens per second)
+aristo-engine-q6  |       total time =    5474.16 ms /   110 tokens
+aristo-engine-q6  | srv  update_slots: all slots are idle
+
+- LLAMA_ARG_N_GPU_LAYERS=3１  # Q6用に調整
+      - LLAMA_ARG_PORT=8081  # ポートを変更
+      - LLAMA_ARG_N_THREADS=24
+      - LLAMA_ARG_BATCH=512
+      - LLAMA_ARG_UBATCH=256
+      - GGML_CUDA_NO_PINNED=0
+      - LLAMA_ARG_TENSOR_SPLIT=1,1
+
+aristo-engine-q6  | load_tensors:        CUDA0 model buffer size = 27583.13 MiB
+aristo-engine-q6  | load_tensors:        CUDA1 model buffer size = 26011.05 MiB
+aristo-engine-q6  | load_tensors:   CPU_Mapped model buffer size = 31043.79 MiB
+
+aristo-engine-q6  | prompt eval time =   32955.31 ms /  3108 tokens (   10.60 ms per token,    94.31 tokens per second)
+aristo-engine-q6  |        eval time =   40429.74 ms /   647 tokens (   62.49 ms per token,    16.00 tokens per second)
+aristo-engine-q6  |       total time =   73385.05 ms /  3755 tokens
+
+aristo-engine-q6  | prompt eval time =     357.51 ms /    20 tokens (   17.88 ms per token,    55.94 tokens per second)
+aristo-engine-q6  |        eval time =    6979.63 ms /   121 tokens (   57.68 ms per token,    17.34 tokens per second)
+aristo-engine-q6  |       total time =    7337.14 ms /   141 tokens
+
+aristo-engine-q6  | load_tensors:        CUDA0 model buffer size = 27583.13 MiB
+aristo-engine-q6  | load_tensors:        CUDA1 model buffer size = 26011.05 MiB
+aristo-engine-q6  | loa      - LLAMA_ARG_N_GPU_LAYERS=30  # Q6用に調整
+      - LLAMA_ARG_N_GPU_LAYERS=3１  # Q6用に調整
+      - LLAMA_ARG_PORT=8081  # ポートを変更
+      - LLAMA_ARG_N_THREADS=24
+      - LLAMA_ARG_BATCH=1024
+      - LLAMA_ARG_UBATCH=512
+      - GGML_CUDA_NO_PINNED=0
+      - LLAMA_ARG_TENSOR_SPLIT=1,1
+      
+aristo-engine-q6  | prompt eval time =   26851.81 ms /  3913 tokens (    6.86 ms per token,   145.73 tokens per second)
+aristo-engine-q6  |        eval time =   39955.49 ms /   636 tokens (   62.82 ms per token,    15.92 tokens per second)
+aristo-engine-q6  |       total time =   66807.30 ms /  4549 tokens
+
+aristo-engine-q6  | prompt eval time =    7539.99 ms /  2520 tokens (    2.99 ms per token,   334.22 tokens per second)
+aristo-engine-q6  |        eval time =   10179.74 ms /   183 tokens (   55.63 ms per token,    17.98 tokens per second)
+aristo-engine-q6  |       total time =   17719.73 ms /  2703 tokens
+
+
+aristo-engine-q6  | load_tensors:        CUDA0 model buffer size = 27583.13 MiB
+aristo-engine-q6  | load_tensors:        CUDA1 model buffer size = 26011.05 MiB
+aristo-engine-q6  | load_tensors:   CPU_Mapped model buffer size = 31043.79 MiB
+   - LLAMA_ARG_MODEL=/models/Llama-4-Scout-17B-16E-Instruct-Q6_K-00001-of-00003.gguf
+      - LLAMA_ARG_CTX_SIZE=4096
+      - LLAMA_ARG_MODEL_TYPE=Q6_K  # Q6用のモデルタイプ
+      - LLAMA_ARG_N_GPU_LAYERS=31  # Q6用に調整
+      - LLAMA_ARG_HOST=0.0.0.0
+      - LLAMA_ARG_PORT=8081  # ポートを変更
+      - LLAMA_ARG_N_THREADS=24
+      - LLAMA_ARG_BATCH=2048
+      - LLAMA_ARG_UBATCH=1024
+      - LLAMA_ARG_FLASH_ATTN=1    # まだ試していない 
+      - LLAMA_ARG_CONT_BATCHING=1 # まだ試していない
+      - GGML_CUDA_NO_PINNED=0
+      - LLAMA_ARG_TENSOR_SPLIT=1,1
+      
+aristo-engine-q6  | prompt eval time =   21620.73 ms /  2718 tokens (    7.95 ms per token,   125.71 tokens per second)
+aristo-engine-q6  |        eval time =   44127.83 ms /   636 tokens (   69.38 ms per token,    14.41 tokens per second)
+aristo-engine-q6  |       total time =   65748.56 ms /  3354 tokens
+
+aristo-engine-q6  | prompt eval time =    4039.03 ms /    16 tokens (  252.44 ms per token,     3.96 tokens per second)
+aristo-engine-q6  |        eval time =   12877.29 ms /   182 tokens (   70.75 ms per token,    14.13 tokens per second)
+aristo-engine-q6  |       total time =   16916.33 ms /   198 tokens
+
+
+aristo-engine-q6  | load_tensors:        CUDA0 model buffer size = 27538.13 MiB
+aristo-engine-q6  | load_tensors:        CUDA1 model buffer size = 27763.13 MiB
+aristo-engine-q6  | load_tensors:   CPU_Mapped model buffer size = 29336.72 MiB
+      - LLAMA_ARG_MODEL=/models/Llama-4-Scout-17B-16E-Instruct-Q6_K-00001-of-00003.gguf
+      - LLAMA_ARG_CTX_SIZE=8192
+      - LLAMA_ARG_MODEL_TYPE=Q6_K  # Q6用のモデルタイプ
+      - LLAMA_ARG_N_GPU_LAYERS=32  # Q6用に調整
+      - LLAMA_ARG_HOST=0.0.0.0
+      - LLAMA_ARG_PORT=8081  # ポートを変更
+      - LLAMA_ARG_N_THREADS=24
+      - LLAMA_ARG_BATCH=1024
+      - LLAMA_ARG_UBATCH=512
+      - GGML_CUDA_NO_PINNED=0
+      - LLAMA_ARG_TENSOR_SPLIT=1,1
+      
+aristo-engine-q6  | prompt eval time =   30972.35 ms /  5614 tokens (    5.52 ms per token,   181.26 tokens per second)
+aristo-engine-q6  |        eval time =   36681.05 ms /   553 tokens (   66.33 ms per token,    15.08 tokens per second)
+aristo-engine-q6  |       total time =   67653.39 ms /  6167 tokens
+
+aristo-engine-q6  | prompt eval time =     342.53 ms /    18 tokens (   19.03 ms per token,    52.55 tokens per second)
+aristo-engine-q6  |        eval time =   10936.29 ms /   183 tokens (   59.76 ms per token,    16.73 tokens per second)
+aristo-engine-q6  |       total time =   11278.82 ms /   201 tokens
+
+
+      - LLAMA_ARG_MODEL=/models/Llama-4-Scout-17B-16E-Instruct-Q6_K-00001-of-00003.gguf
+      - LLAMA_ARG_CTX_SIZE=8192
+      - LLAMA_ARG_MODEL_TYPE=Q6_K  # Q6用のモデルタイプ
+      - LLAMA_ARG_N_GPU_LAYERS=32  # Q6用に調整
+      - LLAMA_ARG_HOST=0.0.0.0
+      - LLAMA_ARG_PORT=8081  # ポートを変更
+      - LLAMA_ARG_N_THREADS=24
+      - LLAMA_ARG_BATCH=4096
+      - LLAMA_ARG_UBATCH=1024
+      - GGML_CUDA_NO_PINNED=0
+      - LLAMA_ARG_TENSOR_SPLIT=1,1

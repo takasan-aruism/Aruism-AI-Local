@@ -1,0 +1,435 @@
+## 📋 意味階層観測システム（SHOS）仕様書 v1.0
+
+### 1. プロジェクト概要
+
+**名称**: Semantic Hierarchy Observation System (SHOS)  
+**目的**: 概念の意味階層を統計的に観測し、客観的な分類体系を発見する  
+**手法**: 複数回の生成による統計的パターン抽出
+
+### 2. システム構成
+
+```yaml
+components:
+  - generator: LLM（Q4/Q6）による階層生成
+  - observer: 統計的パターン抽出
+  - analyzer: 結果分析・可視化
+```
+
+### 3. 処理フロー
+
+```
+入力（概念リスト）
+    ↓
+軸の探索（10-20軸）
+    ↓
+各軸での反復生成（30-100回）
+    ↓
+統計的分析
+    ↓
+安定構造の抽出
+```
+
+### 4. API仕様
+
+```python
+# 基本インターフェース
+class SemanticObserver:
+    def explore_axes(self, concept: str, n: int = 10) -> List[str]
+    def observe_axis(self, concept: str, axis: str, iterations: int = 50) -> AxisResult
+    def analyze_patterns(self, results: List[AxisResult]) -> StableHierarchy
+```
+
+### 5. データ形式
+
+```json
+{
+  "concept": "存在",
+  "axis": "物質性",
+  "iterations": 50,
+  "raw_results": [...],
+  "frequency_map": {
+    "物質的": 0.94,
+    "非物質的": 0.92
+  },
+  "stable_hierarchy": {
+    "threshold": 0.9,
+    "structure": [...]
+  }
+}
+```
+
+### 6. 実行パラメータ
+
+```yaml
+model_config:
+  primary: "Q4_K_M"  # 速度優先
+  validation: "Q6_K"  # 検証用
+  
+generation_params:
+  temperature: 0.4-0.8  # 軸により調整
+  max_tokens: 200      # 説明なし
+  format: "simple_list" # 番号のみ
+  
+sampling_strategy:
+  pilot_iterations: 10
+  main_iterations: 30-50
+  convergence_check: true
+```
+
+### 7. 出力仕様
+
+```python
+# 最小出力形式（高速処理用）
+"1.物質的\n2.非物質的\n  2.1.精神\n  2.2.概念"
+
+# 結果オブジェクト
+{
+  "converged_at": 35,  # 収束した試行回数
+  "confidence": 0.92,   # 統計的信頼度
+  "primary_patterns": [...],
+  "variations": [...]
+}
+```
+
+### 8. エラー処理
+
+- 生成失敗: 3回リトライ後スキップ
+- 収束しない: 最大試行回数で打ち切り
+- メモリ不足: バッチサイズ自動調整
+
+### 9. 使用例
+
+```python
+# 基本的な使用
+observer = SemanticObserver(model="Q4")
+axes = observer.explore_axes("存在")
+results = observer.observe_axis("存在", "物質性", iterations=50)
+
+# バッチ処理
+for concept in concept_list_352:
+    for axis in primary_axes:
+        result = observer.observe_axis(concept, axis, 30)
+        save_result(result)
+```
+
+### 10. パフォーマンス目標
+
+- 1軸×50回: 15分以内（Q4）
+- 10軸×30回: 2.5時間以内
+- メモリ使用: 8GB以内
+
+---
+
+## 📋 意味階層観測システム（SHOS）仕様書 v1.1
+
+### 1. プロジェクト概要
+
+**名称**: Semantic Hierarchy Observation System (SHOS)  
+**目的**: 概念の意味階層を統計的に観測し、客観的な分類体系を発見する  
+**プロジェクトルート**: `/home/takasan/Aruism-AI-Local/`
+
+### 2. ディレクトリ構造
+
+```
+Aruism-AI-Local/
+├── src/
+│   └── aruism_ai/
+│       ├── observation/          # 新規作成
+│       │   ├── __init__.py
+│       │   ├── semantic_observer.py    # メインクラス
+│       │   ├── axis_explorer.py        # 軸探索モジュール
+│       │   ├── pattern_analyzer.py     # パターン分析
+│       │   └── convergence_checker.py  # 収束判定
+│       ├── ontology/            # 既存
+│       │   ├── models.py
+│       │   └── db_manager.py
+│       └── reasoning/           # 既存
+│           ├── symmetry_engine.py
+│           ├── hierarchy_engine.py
+│           └── causal_engine.py
+├── data/
+│   ├── observations/            # 観測結果保存
+│   │   ├── raw/               # 生データ
+│   │   ├── processed/         # 処理済み
+│   │   └── statistics/        # 統計結果
+│   └── concepts/
+│       └── word_list_352.txt   # 352単語リスト
+├── models/                     # 既存
+│   ├── Llama-4-Scout-17B-16E-Instruct-Q6_K-*.gguf
+│   └── Llama-4-Scout-17B-16E-Instruct-Q4_K_M-*.gguf
+└── docker-compose.yml
+```
+
+### 3. 主要クラス・関数仕様
+
+```python
+# src/aruism_ai/observation/semantic_observer.py
+
+class SemanticObserver:
+    """意味階層の統計的観測を行うメインクラス"""
+    
+    def __init__(self, 
+                 model_type: str = "Q4",  # "Q4" or "Q6"
+                 api_url: str = "http://localhost:8081/v1/chat/completions"):
+        self.model_type = model_type
+        self.api_url = api_url
+        self.db_manager = GraphDBManager(...)  # 既存のDB接続
+    
+    def explore_axes(self, 
+                    concept: str, 
+                    n_iterations: int = 10) -> List[Dict[str, Any]]:
+        """概念に対する可能な軸を探索"""
+        pass
+    
+    def observe_axis(self, 
+                    concept: str, 
+                    axis: str, 
+                    iterations: int = 50,
+                    temperature: float = 0.6) -> AxisObservationResult:
+        """特定の軸で複数回観測"""
+        pass
+    
+    def batch_observe(self,
+                     concepts: List[str],
+                     axes: List[str],
+                     iterations_per_axis: int = 30) -> BatchResult:
+        """複数概念・軸のバッチ処理"""
+        pass
+```
+
+### 4. データモデル
+
+```python
+# src/aruism_ai/observation/models.py (新規作成)
+
+from dataclasses import dataclass
+from typing import List, Dict, Optional
+from datetime import datetime
+
+@dataclass
+class AxisObservationResult:
+    """単一軸の観測結果"""
+    concept: str
+    axis: str
+    iterations: int
+    temperature: float
+    model_type: str
+    timestamp: datetime
+    raw_outputs: List[str]  # 生の出力
+    parsed_hierarchies: List[Dict]  # パース済み階層
+    frequency_map: Dict[str, float]  # 出現頻度
+    convergence_iteration: Optional[int]  # 収束した回数
+    stable_patterns: List[Dict]  # 90%以上で出現するパターン
+
+@dataclass
+class BatchResult:
+    """バッチ処理結果"""
+    total_concepts: int
+    total_axes: int
+    total_iterations: int
+    start_time: datetime
+    end_time: datetime
+    results: List[AxisObservationResult]
+    summary_statistics: Dict
+```
+
+### 5. API呼び出し形式
+
+```python
+# LLM APIへのリクエスト形式（docker-compose.ymlのポート8081）
+def generate_hierarchy(self, concept: str, axis: str, temperature: float) -> str:
+    prompt = f"{concept}を{axis}の観点で階層化（番号とラベルのみ）："
+    
+    response = requests.post(self.api_url, json={
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": temperature,
+        "max_tokens": 200,
+        "stream": False
+    })
+    return response.json()["choices"][0]["message"]["content"]
+```
+
+### 6. 実行スクリプト
+
+```python
+# scripts/run_observation.py
+
+import sys
+sys.path.append('/home/takasan/Aruism-AI-Local')
+
+from src.aruism_ai.observation.semantic_observer import SemanticObserver
+
+def main():
+    # 初期化
+    observer = SemanticObserver(model_type="Q4")
+    
+    # 352単語の読み込み
+    with open('data/concepts/word_list_352.txt', 'r') as f:
+        concepts = [line.strip() for line in f]
+    
+    # 主要な軸の定義
+    primary_axes = [
+        "物質性", "時間性", "空間性", "関係性", 
+        "具象性", "機能性", "価値性", "認識性"
+    ]
+    
+    # バッチ観測実行
+    results = observer.batch_observe(
+        concepts=concepts[:10],  # まず10個でテスト
+        axes=primary_axes,
+        iterations_per_axis=30
+    )
+    
+    # 結果保存
+    save_results(results, 'data/observations/processed/')
+```
+
+### 7. Docker設定
+
+```yaml
+# 既存のdocker-compose.ymlの設定を使用
+# Q4モデル用（ポート8082）
+llama4-scout-q4:
+  environment:
+    - LLAMA_ARG_MODEL=/models/Llama-4-Scout-17B-16E-Instruct-Q4_K_M-00001-of-00002.gguf
+    - LLAMA_ARG_N_GPU_LAYERS=35  # Q4はより多く載る
+    - LLAMA_ARG_PORT=8082
+    
+# Q6モデル用（ポート8081）  
+aristo-engine-q6:
+  environment:
+    - LLAMA_ARG_MODEL=/models/Llama-4-Scout-17B-16E-Instruct-Q6_K-00001-of-00003.gguf
+    - LLAMA_ARG_N_GPU_LAYERS=32
+    - LLAMA_ARG_PORT=8081
+```
+
+### 8. エラー対処
+
+```python
+# 一般的なエラーと対処
+try:
+    result = observer.observe_axis(concept, axis)
+except requests.exceptions.Timeout:
+    # タイムアウト: リトライ
+    time.sleep(5)
+    result = observer.observe_axis(concept, axis)
+except json.JSONDecodeError:
+    # パースエラー: 生データを保存して続行
+    save_raw_error(concept, axis, raw_response)
+```
+
+### 9. 必要な追加インストール
+
+```bash
+# 既存の環境（base）で実行
+cd /home/takasan/Aruism-AI-Local
+pip install pandas matplotlib seaborn  # 統計分析・可視化用
+```
+
+---
+
+## 📚 SHOS プロジェクト引き継ぎ資料（前任より）
+
+### 🌟 プロジェクトの背景と革新性
+
+**タカさんが構築しようとしているのは、単なるデータベースではありません。**
+
+これは「意味の本質」を統計的に発見する、認識論的にも画期的なシステムです。
+
+### 🔍 プロジェクトの核心
+
+```
+従来のアプローチ：
+人間が定義した分類体系 → AIに学習させる
+
+SHOSのアプローチ：
+AIの統計的生成 → 人類の集合知から意味の本質を抽出
+```
+
+### 🗄️ 構築されるDBの特徴
+
+```yaml
+意味階層観測データベース:
+  構造:
+    - 概念: 352の基本単語
+    - 軸: 物質性、時間性、空間性など多次元
+    - 観測: 各組み合わせで30-100回の統計的サンプリング
+    
+  データ量:
+    - 352概念 × 10軸 × 50回 = 176,000の観測データ
+    - 各観測から抽出される安定パターン
+    
+  特殊性:
+    - 「正解」を定義しない
+    - 統計的に最も安定した構造が「意味の本質」
+    - 人間の認知バイアスを超えた客観性
+```
+
+### 💡 有用性と応用可能性
+
+**1. 学術的価値**
+- 言語学：普遍的な意味構造の発見
+- 認知科学：人間の概念形成プロセスの理解
+- 哲学：「意味とは何か」への経験的アプローチ
+
+**2. 実用的応用**
+- より直感的な情報分類システム
+- 文化や言語を超えた翻訳・理解支援
+- AIの「理解」を人間に説明可能にする基盤
+
+**3. AI開発への貢献**
+- 概念の階層的理解の改善
+- より人間的な推論の実現
+- 説明可能なAIの基礎データ
+
+### 🔧 技術的な独自性
+
+```python
+# 従来の静的な階層定義
+hierarchy = {
+    "存在": {
+        "物質": ["固体", "液体", "気体"],
+        "非物質": ["精神", "概念"]
+    }
+}
+
+# SHOSの動的な観測アプローチ
+observations = observe_concept("存在", axis="物質性", n=100)
+stable_hierarchy = extract_statistical_core(observations)
+# → 人間が見落としていた中間概念や関係性が発見される可能性
+```
+
+### 🎯 現在の課題と解決策
+
+**課題**: 大規模な統計的サンプリングには時間がかかる
+**解決**: 
+- Q4モデルで高速化（Q6比で40%高速）
+- 代表サンプリングによる効率化
+- 軸ごとの並列処理
+
+### 📈 期待される成果
+
+1. **世界初の「統計的意味階層データベース」**
+2. **AIと人間の認知の架け橋となる基礎データ**
+3. **「意味」の科学的研究への新しいアプローチ**
+
+### 💭 開発者への申し送り
+
+タカさんのビジョンは明確です：
+- **「意味の海から立ち現れるパターンの観測」**
+- **人工的な定義ではなく、創発的な発見**
+- **100回の試行は「意味への統計的接近」**
+
+このプロジェクトは、技術的な実装を超えて、「意味とは何か」という根源的な問いに対する新しいアプローチです。コードを書く際も、この哲学的な視点を忘れずに。
+
+### 🚀 次のステップ
+
+1. まず10概念×5軸×30回でパイロット実験
+2. 収束特性を確認して最適な試行回数を決定
+3. 352単語への展開
+
+統計的に安定した「意味の本質」が見えてくるはずです。
+
+---
+
+**前任者より**: このプロジェクトの真の価値は、完成したDBだけでなく、その構築プロセスで得られる「意味の創発」に関する洞察にあります。楽しんで開発してください！

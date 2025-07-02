@@ -17,3 +17,23 @@ data/
 src/aruism_ai.egg-info/
 workspace/
 .env
+
+# Large model files
+models/
+*.gguf
+*.bin
+*.safetensors
+
+# Large data files
+data/BCCWJ_frequencylist_luw_ver1_0.tsv
+data/wnjpn.db
+
+# Workspace directories
+workspace/
+
+# Build artifacts
+build/
+*.so
+
+# Git temporary files
+.git/objects/pack/tmp_pack_*
