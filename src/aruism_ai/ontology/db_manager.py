@@ -1,11 +1,12 @@
 ######################################################################
 # Aruism AI Project - Graph Database Manager
-# バージョン: 2.2 (最終整合性版)
+# バージョン: 2.3 (多軸階層対応版)
 ######################################################################
 import logging
+import json # LevelNodeのreasoningをJSON文字列として扱うためにインポート
 from typing import List, Dict, Any, Optional
-from neo4j import GraphDatabase, Driver, exceptions
-from .models import Concept, Relationship
+from neo4j import GraphDatabase, Driver
+from .models import Concept, Relationship, AxisNode, LevelNode
 
 class GraphDBManager:
     def __init__(self, uri: str, user: str, password: str | None):
@@ -27,8 +28,8 @@ class GraphDBManager:
             return []
         try:
             with self.driver.session() as session:
-                result = session.run(query, **kwargs)
-                return result.data()
+                # 全ての書き込みクエリをトランザクション内で実行
+                return session.write_transaction(lambda tx: tx.run(query, **kwargs).data())
         except Exception as e:
             logging.error(f"クエリ実行中にエラー: {e}", exc_info=True)
             return []
@@ -93,3 +94,29 @@ class GraphDBManager:
         SET c += row.properties
         """
         self.execute_query(query, batch=batch)
+
+    def batch_merge_nodes(self, label: str, id_property: str, node_batch: List[Dict]):
+        """汎用的なノードのマージ（作成/更新）メソッド"""
+        query = f"""
+        UNWIND $batch AS props
+        MERGE (n:{label} {{{id_property}: props.{id_property}}})
+       SET n += props
+        """
+        self.execute_query(query, batch=node_batch)
+
+    def batch_merge_relationships(
+        self,
+        source_label: str, source_id_prop: str,
+        target_label: str, target_id_prop: str,
+        rel_type: str,
+        rel_batch: List[Dict]
+    ):
+        """汎用的な関連のマージ（作成/更新）メソッド"""
+        query = f"""
+        UNWIND $batch AS rel
+        MATCH (s:{source_label} {{{source_id_prop}: rel.source_id}})
+        MATCH (t:{target_label} {{{target_id_prop}: rel.target_id}})
+        MERGE (s)-[r:{rel_type}]->(t)
+        SET r = rel.props
+        """
+        self.execute_query(query, batch=rel_batch)

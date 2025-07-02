@@ -1,207 +1,147 @@
-# src/aruism_ai/automation/run_hierarchy_generation.py
-
+######################################################################
+# Aruism AI Project - Multi-Axis Hierarchy Updater
+# バージョン: 1.0
+# 目的: AI生成の多軸階層JSONを解釈し、Neo4jに永続化する
+######################################################################
 import os
 import sys
 import json
-import subprocess
-import argparse
 import logging
-import tempfile
-import re
+import argparse
+from typing import List, Dict, Any
 
-# プロジェクトルートをパスに追加
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+# --- プロジェクトのパス設定 ---
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PROJECT_ROOT)
+
 from aruism_ai.ontology.db_manager import GraphDBManager
+from aruism_ai.ontology.models import AxisNode, LevelNode
 
-# --- 設定項目 ---
-LLAMA_CPP_DIR = "/workspace/llama.cpp"
-LLAMA_CLI_PATH = os.path.join(LLAMA_CPP_DIR, "build/bin", "llama-cli")  # 修正: llama-cli
-MODEL_PATH = os.path.join(LLAMA_CPP_DIR, "models/Llama-4-Scout-Q8-merged.gguf")
-DRAFT_DIR = "/workspace/Aruism-AI-Local/data/drafts"
-UPDATER_SCRIPT_PATH = "/workspace/Aruism-AI-Local/src/aruism_ai/bootstrapping/hierarchy_updater.py"
+class HierarchyUpdater:
+    def __init__(self, db_manager: GraphDBManager, concept_id: str, json_data: Dict[str, Any]):
+        self.db = db_manager
+        self.root_concept_id = concept_id
+        self.data = json_data
+        self.nodes_to_create: Dict[str, List[Dict]] = {"Axis": [], "Level": []}
+        self.rels_to_create: Dict[str, List[Dict]] = {"CONCEPT_HAS_AXIS": [], "AXIS_HAS_LEVEL": []}
 
-def check_environment():
-    """実行環境をチェック"""
-    if not os.path.exists(LLAMA_CLI_PATH):
-        raise FileNotFoundError(f"llama-cli が見つかりません: {LLAMA_CLI_PATH}")
-    
-    if not os.path.exists(MODEL_PATH):
-        raise FileNotFoundError(f"モデルファイルが見つかりません: {MODEL_PATH}")
-    
-    print("環境チェック: OK")
+    def parse_and_transform(self):
+        """JSONデータを解析し、DB格納用のオブジェクトに変換する"""
+        logging.info("JSONデータの解析と変換を開始します。")
 
-class GenerationOrchestrator:
-    """
-    コンセプトIDに基づき、階層生成からDB更新までの一連のプロセスを統括する。
-    """
-    def __init__(self, db_manager: GraphDBManager):
-        self.db_manager = db_manager
-        check_environment()
+        for axis_id, axis_data in self.data.items():
+            if axis_id.startswith("_"): continue
 
-    def _get_concept_pair_info(self, concept_id: str):
-        """指定されたIDのコンセプトと、その対称コンセプトの情報をDBから取得する。"""
-        query = """
-        MATCH (c1:Concept {concept_id: $concept_id})
-        OPTIONAL MATCH (c1)-[:Symmetric_To]-(c2:Concept)
-        RETURN c1.kanji_axis AS axis1, c1.english_word AS word1,
-               c2.concept_id AS id2, c2.kanji_axis AS axis2, c2.english_word AS word2
-        """
-        result = self.db_manager.execute_query(query, concept_id=concept_id)
-        if not result:
-            raise ValueError(f"コンセプトID '{concept_id}' がデータベースに見つかりません。")
-        return result[0]
+            # 1. Axisノードの準備
+            axis_name = axis_data.get("_philosophical_approach", axis_id)
+            self.nodes_to_create["Axis"].append(AxisNode(axis_id=axis_id, name=axis_name).to_dict())
 
-    def _generate_prompt(self, pair_info: dict):
-        """Llama 4に渡すための、対称ペア分析用のプロンプトを生成する。"""
-        if pair_info.get("id2"):
-            prompt_text = f"""
-# Task: Generate and Compare Meaning Hierarchies for a Symmetric Pair
-## Input:
-{{
-  "axis_1": {{ "kanji": "{pair_info['axis1']}", "english": "{pair_info['word1']}" }},
-  "axis_2": {{ "kanji": "{pair_info['axis2']}", "english": "{pair_info['word2']}" }}
-}}
-## Output:
-Please generate a JSON structure with hierarchies for both axes."""
-        else:
-            prompt_text = f"""
-# Task: Generate Meaning Hierarchy for a Kanji Axis
-## Input:
-{{ "kanji_axis": "{pair_info['axis1']}" }}
-## Output:
-Please generate a JSON structure with the hierarchy."""
-        return prompt_text
+            # 2. (Concept)-[:HAS_AXIS]->(Axis) 関連の準備
+            self.rels_to_create["CONCEPT_HAS_AXIS"].append({
+                "source_id": self.root_concept_id,
+                "target_id": axis_id,
+                "props": {}
+            })
 
-    def _run_llama_cli(self, prompt: str):
-        """llama-cliをサブプロセスとして実行し、出力をキャプチャする。"""
-        # プロンプトを一時ファイルに保存
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
-            f.write(prompt)
-            prompt_file = f.name
-        
+            # 3. Levelノードと (Axis)-[:HAS_LEVEL]->(Level) 関連の準備
+            for concept_key, hierarchy in axis_data.items():
+                if concept_key.startswith("_") or not isinstance(hierarchy, dict): continue
+
+                concept_being_processed = self.root_concept_id # TODO: 将来的に対称ペアのIDを正しく扱う
+                
+                for level, details in hierarchy.items():
+                    if level.startswith("_") or not isinstance(details, dict): continue
+
+                    level_id = f"{axis_id}_{concept_being_processed}_{level}"
+                    reasoning_str = json.dumps({k: v for k, v in details.items() if k.startswith("_")}, ensure_ascii=False)
+                    
+                    self.nodes_to_create["Level"].append(LevelNode(
+                        level_id=level_id,
+                        name_ja=details.get("concept", ""),
+                        name_en=details.get("english", ""),
+                        reasoning=reasoning_str
+                    ).to_dict())
+
+                    self.rels_to_create["AXIS_HAS_LEVEL"].append({
+                        "source_id": axis_id,
+                        "target_id": level_id,
+                        "props": {
+                            "level": int(level),
+                            "concept_id": concept_being_processed
+                        }
+                    })
+        logging.info("データの変換が完了しました。")
+
+    def execute_update(self):
+        """変換したデータをDBに書き込む"""
+        logging.info("データベースの更新を開始します...")
         try:
-            command = [
-                LLAMA_CLI_PATH,
-                "-m", MODEL_PATH,
-                "-f", prompt_file,  # ファイルから読み込み
-                "-n", "1024",
-                "--temp", "0.7",
-                "--n-gpu-layers", "-1",  # GPU使用
-                "--no-display-prompt"    # プロンプトを出力に含めない
-            ]
-            
-            # 環境変数を設定
-            env = os.environ.copy()
-            env['LANG'] = 'ja_JP.UTF-8'
-            env['LC_ALL'] = 'ja_JP.UTF-8'
-            
-            logging.info(f"llama-cliを実行します: {' '.join(command)}")
-            result = subprocess.run(
-                command, 
-                capture_output=True, 
-                text=True,
-                env=env,
-                encoding='utf-8'
+            # Step 1: ノードの作成
+            self.db.batch_merge_nodes(
+                label="Axis",
+                id_property="axis_id",
+                node_batch=self.nodes_to_create["Axis"]
             )
+            logging.info(f"{len(self.nodes_to_create['Axis'])}件のAxisノードをマージしました。")
             
-            if result.returncode != 0:
-                raise RuntimeError(f"llama-cliの実行に失敗しました:\n{result.stderr}")
-            
-            return self._extract_json_from_output(result.stdout)
-            
-        finally:
-            os.unlink(prompt_file)
+            self.db.batch_merge_nodes(
+                label="Level",
+                id_property="level_id",
+                node_batch=self.nodes_to_create["Level"]
+            )
+            logging.info(f"{len(self.nodes_to_create['Level'])}件のLevelノードをマージしました。")
 
-    def _extract_json_from_output(self, output: str):
-        """AIの出力からJSONを抽出する（堅牢版）"""
-        # Markdownコードブロック内のJSONを探す
-        code_block_match = re.search(r'```json\n(.*?)\n```', output, re.DOTALL)
-        if code_block_match:
-            try:
-                return json.loads(code_block_match.group(1))
-            except json.JSONDecodeError:
-                pass
-        
-        # 通常のJSONパターンを探す
-        json_patterns = [
-            r'\{[^{}]*\{[^{}]*\}[^{}]*\}',  # ネストしたJSON
-            r'\{[^}]+\}',  # シンプルなJSON
-        ]
-        
-        for pattern in json_patterns:
-            matches = re.findall(pattern, output, re.DOTALL)
-            for match in matches:
-                try:
-                    return json.loads(match)
-                except json.JSONDecodeError:
-                    continue
-        
-        raise ValueError(f"有効なJSONが見つかりませんでした:\n{output}")
+            # Step 2: 関連の作成
+            self.db.batch_merge_relationships(
+                source_label="Concept", source_id_prop="concept_id",
+                target_label="Axis", target_id_prop="axis_id",
+                rel_type="HAS_AXIS",
+                rel_batch=self.rels_to_create["CONCEPT_HAS_AXIS"]
+            )
+            logging.info(f"{len(self.rels_to_create['CONCEPT_HAS_AXIS'])}件のHAS_AXIS関連をマージしました。")
 
-    def execute_workflow(self, start_concept_id: str):
-        """自動化ワークフロー全体を実行する。"""
-        try:
-            # 1. DBからコンセプト情報を取得
-            pair_info = self._get_concept_pair_info(start_concept_id)
-            
-            # 2. プロンプトを生成
-            prompt = self._generate_prompt(pair_info)
-            logging.info("プロンプトを生成しました。")
+            self.db.batch_merge_relationships(
+                source_label="Axis", source_id_prop="axis_id",
+                target_label="Level", target_id_prop="level_id",
+                rel_type="HAS_LEVEL",
+                rel_batch=self.rels_to_create["AXIS_HAS_LEVEL"]
+            )
+            logging.info(f"{len(self.rels_to_create['AXIS_HAS_LEVEL'])}件のHAS_LEVEL関連をマージしました。")
 
-            # 3. Llama 4を実行して草案を生成
-            logging.info("Llama 4に階層構造の起草を依頼します...")
-            draft_data = self._run_llama_cli(prompt)
-            
-            # 4. 草案をファイルに保存
-            os.makedirs(DRAFT_DIR, exist_ok=True)
-            draft_file_path = os.path.join(DRAFT_DIR, f"{start_concept_id}_draft.json")
-            with open(draft_file_path, 'w', encoding='utf-8') as f:
-                json.dump(draft_data, f, ensure_ascii=False, indent=2)
-            
-            print("\n" + "="*50)
-            print("AIによる階層構造の草案が生成されました。")
-            print(f"ファイルパス: {draft_file_path}")
-            print("="*50)
-            print(json.dumps(draft_data, ensure_ascii=False, indent=2))
-            print("="*50)
-
-            # 5. 創設者による承認
-            approval = input("この内容でデータベースを更新しますか？ (y/n): ").lower()
-
-            # 6. 承認されれば、DB更新スクリプトを実行
-            if approval == 'y':
-                logging.info("承認されました。データベースを更新します。")
-                
-                # '愛'の更新
-                subprocess.run([
-                    "python3", UPDATER_SCRIPT_PATH,
-                    start_concept_id, draft_file_path, pair_info['axis1']
-                ], check=True)
-                
-                # 対称ペアがあれば、それも更新
-                if pair_info.get("id2"):
-                    subprocess.run([
-                        "python3", UPDATER_SCRIPT_PATH,
-                        pair_info['id2'], draft_file_path, pair_info['axis2']
-                    ], check=True)
-
-                print("データベースの更新が完了しました。")
-            else:
-                print("処理は中断されました。データベースは更新されていません。")
-
+            logging.info("データベースの更新が正常に完了しました。")
         except Exception as e:
-            logging.error(f"ワークフロー実行中にエラーが発生しました: {e}", exc_info=True)
-
+            logging.error(f"データベース更新中にエラーが発生しました: {e}", exc_info=True)
+            raise
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-    
-    parser = argparse.ArgumentParser(description="アリストAIの知識階層を半自動で生成・更新します。")
-    parser.add_argument("start_concept_id", type=str, help="起点となるコンセプトのID (例: M0001)")
+    logging.basicConfig(level="INFO", format='%(asctime)s - %(levelname)s - %(message)s')
+
+    parser = argparse.ArgumentParser(description="AI生成の多軸階層JSONをDBに永続化します。")
+    parser.add_argument("concept_id", type=str, help="ルートとなるコンセプトのID (例: M0001)")
+    parser.add_argument("json_file_path", type=str, help="入力となるJSONファイルのパス")
     args = parser.parse_args()
 
-    # DBManagerの初期化（実際の実装に合わせて調整）
-    db_manager = GraphDBManager()
-    orchestrator = GenerationOrchestrator(db_manager)
-    
-    orchestrator.execute_workflow(args.start_concept_id)
+    db_manager = None
+    try:
+        NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD")
+        if not NEO4J_PASSWORD:
+            raise ValueError("環境変数 NEO4J_PASSWORD が設定されていません。")
+        
+        with open(args.json_file_path, 'r', encoding='utf-8') as f:
+            json_data = json.load(f)
+
+        db_manager = GraphDBManager(uri="bolt://arism-db:7687", user="neo4j", password=NEO4J_PASSWORD)
+        
+        updater = HierarchyUpdater(db_manager, args.concept_id, json_data)
+        updater.parse_and_transform()
+        updater.execute_update()
+
+    except FileNotFoundError:
+        logging.error(f"指定されたファイルが見つかりません: {args.json_file_path}")
+    except json.JSONDecodeError:
+        logging.error(f"JSONの解析に失敗しました: {args.json_file_path}")
+    except Exception as e:
+        logging.error(f"処理中に予期せぬエラーが発生しました: {e}", exc_info=True)
+    finally:
+        if db_manager:
+            db_manager.close()
