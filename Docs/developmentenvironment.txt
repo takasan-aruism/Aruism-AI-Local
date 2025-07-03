@@ -1,0 +1,69 @@
+Aruism AI 開発の概念マップ (バージョン1.0)
+
+    目的: 本書は、Aruism AIプロジェクトの主要なスクリプトの役割と、それらの依存関係を定義する。これにより、全ての協力者（人間およびAI）が一貫したアーキテクチャ理解を持つことを保証する。
+
+1. 全体アーキテクチャ概要
+
+本システムは、主に2つの機能で構成される。
+
+    創世記インポート: genesis_importer.pyによる、根源コンセプトの初期データベース構築。
+
+    知識階層生成パイプライン: AI思考エンジンを活用した、各コンセプトの哲学的階層の自動生成とデータベースへの格納。
+
+2. 主要ワークフロー：知識階層の自動生成
+
+    人間が master_orchestrator.py を実行する。
+
+    master_orchestrator は、対象コンセプトIDを引数に run_hierarchy_generation.py を呼び出す。
+
+    run_hierarchy_generation は、aristo-engine に問い合わせ、結果(CSV)を受け取り、それをJSONに変換してドラフトファイルとして保存。成功後、標準出力にそのファイルパスを出力する。
+
+    master_orchestrator は、出力されたファイルパスを受け取り、hierarchy_updater.py を呼び出す。
+
+    hierarchy_updater は、指定されたJSONファイルを読み込み、db_manager.py を介してデータベースを更新する。
+
+3. 主要コンポーネントの役割と依存関係
+
+    ファイル: src/aruism_ai/automation/master_orchestrator.py
+
+        役割: 知識生成パイプライン全体の「司令塔」。中断からの再開機能も持つ。
+
+        依存関係:
+
+            run_hierarchy_generation.py (呼び出し)
+
+            hierarchy_updater.py (呼び出し)
+
+            db_manager.py (対称ペアIDの取得等で使用)
+
+    ファイル: src/aruism_ai/automation/run_hierarchy_generation.py
+
+        役割: AI思考エンジン(aristo-engine)に問い合わせ、思考結果を「設計図（JSONファイル）」として生成する「思考担当」。
+
+        依存関係:
+
+            db_manager.py (コンセプト情報の取得で使用)
+
+    ファイル: src/aruism_ai/automation/hierarchy_updater.py
+
+        役割: 生成された設計図（JSONファイル）に基づき、データベースを更新する「登録担当」。
+
+        依存関係:
+
+            db_manager.py (書き込みで使用)
+
+            models.py
+
+    ファイル: src/aruism_ai/ontology/db_manager.py
+
+        役割: データベース(Neo4j)との全ての接続とクエリ実行を管理する、唯一の窓口。
+
+        依存関係:
+
+            models.py
+
+    ファイル: src/aruism_ai/ontology/models.py
+
+        役割: データベースのノード構造（Concept, AxisNode, LevelNodeなど）を定義するデータクラス。
+
+        依存関係: なし (プロジェクトの最下層)

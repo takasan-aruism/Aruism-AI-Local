@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Docker
+Dockerfile
+Dockerfile.*
+docker-compose.yml
+docker-compose.*.yml
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# --- 最も重要な行 ---
+# モデルファイルやエンジン、キャッシュはビルドコンテキストに含めない
+# これらはvolumesでコンテナにマウントするため、ビルド時には不要
+models/
+engines/
+cache/
+data/drafts/
+data/batch_logs/
