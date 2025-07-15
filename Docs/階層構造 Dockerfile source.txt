@@ -1,0 +1,172 @@
+階層構造
+.
+├── Dockerfile.source-simple
+├── cache
+│   ├── cuda
+│   └── huggingface
+├── data
+│   ├── drafts
+│   │   ├── M0001_db_test_draft.json
+│   │   └── M0001_reasoned_draft.json
+│   ├── language
+│   │   ├── AruismBaseDBTable.csv
+│   │   ├── BCCWJ_frequencylist_luw_ver1_0.tsv
+│   │   ├── BCCWJ_frequencylist_suw_ver1_0.numbers
+│   │   ├── BCCWJ_frequencylist_wtype_ver1_0.tsv
+│   │   ├── SentiWordNet_3.0.0.txt
+│   │   ├── juman-7.01.tar.bz2
+│   │   ├── pn.csv.m3.120408.trim.csv
+│   │   ├── wago.121808.pn.txt
+│   │   └── wnjpn.db
+│   └── observations
+│       ├── processed
+│       ├── raw
+│       └── statistics
+├── docker
+│   ├── base
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   ├── commitfile
+│   │   └── myimage.tar
+│   └── engine
+│       ├── base
+│       │   └── Dockerfile.engine-base
+│       └── qwen
+│           ├── QwQ-32B-AWQ
+│           ├── Qwen3-32B
+│           └── Qwen3-32B-AWQ
+├── docker-compose.yml
+├── requirements.txt
+├── scripts
+│   ├── AI_benchmark
+│   │   ├── test_batch_122_7.2x.py
+│   │   ├── test_batch_122_7.2x_2.py
+│   │   ├── test_batch_122_7.2x_3.py
+│   │   ├── test_batch_optimize (Copy).py
+│   │   ├── test_batch_optimize.py
+│   │   ├── test_kvchache_10_1.8x (Copy).py
+│   │   ├── test_kvchache_10_1.8x.py
+│   │   ├── test_tensor_batch_85av_max119 (Copy).py
+│   │   └── test_tensor_batch_85av_max119.py
+│   ├── check_download.py
+│   ├── check_env.py
+│   ├── checkproperty.py
+│   ├── curate_knowledge.py
+│   ├── download_base_model.py
+│   ├── manual_hierarchy_loader.py
+│   ├── run_observation.py
+│   ├── show_concept_data.py
+│   ├── show_concept_summary.py
+│   ├── test llama4 raw py import.py
+│   ├── test_db_insertion.py
+│   ├── test_llama4_raw.py
+│   └── vllm4bit
+├── src
+│   ├── __init__.py
+│   ├── aruism_ai
+│   │   ├── __init__.py
+│   │   ├── automation
+│   │   │   ├── GenerationOrchestrator
+│   │   │   ├── hierarchy_updater.py
+│   │   │   ├── master_orchestrator.py
+│   │   │   └── run_hierarchy_generation.py
+│   │   ├── bkt.py
+│   │   ├── bootstrapping
+│   │   │   ├── __init__.py
+│   │   │   ├── caseframe_importer.py
+│   │   │   ├── genesis_importer.py
+│   │   │   ├── sentiwordnet_importer.py
+│   │   │   └── wordnet_importer.py
+│   │   ├── integration
+│   │   │   ├── __init__.py
+│   │   │   ├── conceptnet_client.py
+│   │   │   ├── frequency_provider.py
+│   │   │   ├── knowledge_linker.py
+│   │   │   └── morphological_analyzer.py
+│   │   ├── integrity
+│   │   │   ├── __init__.py
+│   │   │   ├── daemon.py
+│   │   │   └── philosophers_loop.py
+│   │   ├── observation
+│   │   │   ├── __init__.py
+│   │   │   ├── axis_explorer.py
+│   │   │   ├── convergence_checker.py
+│   │   │   ├── models.py
+│   │   │   ├── pattern_analyzer.py
+│   │   │   └── semantic_observer.py
+│   │   ├── ontology
+│   │   │   ├── __init__.py
+│   │   │   ├── db_manager.py
+│   │   │   └── models.py
+│   │   ├── reasoning
+│   │   │   ├── __init__.py
+│   │   │   ├── causal_engine.py
+│   │   │   ├── hierarchy_engine.py
+│   │   │   ├── pattern_engine.py
+│   │   │   ├── subjectivity_engine.py
+│   │   │   ├── symmetry_engine.py
+│   │   │   └── user_state_model.py
+│   │   ├── resonance
+│   │   ├── retrieval
+│   │   │   ├── __init__.py
+│   │   │   └── retriever.py
+│   │   └── server.py
+│   ├── aruism_ai.egg-info
+│   │   ├── PKG-INFO
+│   │   ├── SOURCES.txt
+│   │   ├── dependency_links.txt
+│   │   └── top_level.txt
+│   ├── aruism_ai_local.egg-info
+│   │   ├── PKG-INFO
+│   │   ├── SOURCES.txt
+│   │   ├── dependency_links.txt
+│   │   ├── requires.txt
+│   │   └── top_level.txt
+│   └── data
+│       └── drafts
+│           ├── M0001_draft.json
+│           ├── M0001_multiaxial_draft.json
+│           ├── M0001_raw.csv
+│           └── M0001_reasoned_draft.json
+├── tests
+│   ├── __init__.py
+│   ├── bootstrapping
+│   │   ├── test_caseframe_importer.py
+│   │   ├── test_genesis_importer.py
+│   │   ├── test_sentiwordnet_importer.py
+│   │   └── test_wordnet_importer.py
+│   ├── integrity
+│   │   ├── test_daemon.py
+│   │   ├── test_db_integration.py
+│   │   └── test_philosophers_loop.py
+│   ├── ontology
+│   │   └── test_db_manager.py
+│   ├── reasonance
+│   │   └── test_bkt.py
+│   ├── reasoning
+│   │   ├── test_causal_engine.py
+│   │   ├── test_hierarchy_engine.py
+│   │   ├── test_pattern_engine.py
+│   │   ├── test_symmetry_engine.py
+│   │   └── test_user_state_model.py
+│   └── retrieval
+│       └── test_retriever.py
+├── volumes
+│   ├── cache
+│   │   ├── flashinfer
+│   │   │   └── 90
+│   │   ├── huggingface
+	q│   │   │   ├── datasets
+│   │   │   ├── hub
+│   │   │   ├── modules
+│   │   │   └── xet
+│   │   ├── torch_extensions
+│   │   │   └── py312_cu128
+│   │   └── vllm
+│   │       └── gpu_p2p_access_cache_for_0,1.json
+│   ├── engines
+│   ├── models
+│   └── vllm-workspace
+└── workspace
+    └── =4.51.1
+
