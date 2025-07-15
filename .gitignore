@@ -37,3 +37,14 @@ build/
 
 # Git temporary files
 .git/objects/pack/tmp_pack_*
+
+docker/commitfile/
+docker/engine/qwen/QwQ-32B-AWQ/
+docker/engine/qwen/Qwen3-32B/
+docker/engine/qwen/Qwen3-32B-AWQ/
+
+# ワークスペース・データ系
+data/drafts/
+data/language/
+data/observations/
+workspace/
