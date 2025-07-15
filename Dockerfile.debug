@@ -1,5 +1,0 @@
-FROM alpine:latest
-# ビルドコンテキストの内容を/tmpにコピー
-COPY . /tmp/
-# コピーされた内容をリストアップして終了
-RUN ls -laR /tmp/
